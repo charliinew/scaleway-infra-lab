@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>imgflow — PNG to JPEG</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0a0a0a;
+      --surface:      #111111;
+      --surface-2:    #181818;
+      --border:       #1e1e1e;
+      --border-hover: #2e2e2e;
+      --accent:       #6366f1;
+      --accent-dim:   rgba(99,102,241,.08);
+      --text:         #e8e8e8;
+      --text-muted:   #555;
+      --text-dim:     #888;
+      --success:      #22c55e;
+      --error:        #ef4444;
+      --radius:       14px;
+      --radius-sm:    8px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 1.25rem 5rem;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    header {
+      width: 100%;
+      max-width: 620px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 2.25rem 0 3rem;
+    }
+
+    .logo {
+      font-size: .95rem;
+      font-weight: 600;
+      letter-spacing: -.03em;
+    }
+
+    .logo span { color: var(--accent); }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      font-size: .78rem;
+      color: var(--text-muted);
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: background .4s, box-shadow .4s;
+    }
+
+    .dot.online  { background: var(--success); box-shadow: 0 0 7px var(--success); }
+    .dot.offline { background: var(--error); }
+
+    /* ── Main ───────────────────────────────────────────── */
+    main {
+      width: 100%;
+      max-width: 620px;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* ── Drop zone ──────────────────────────────────────── */
+    .drop-zone {
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 4rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s, background .2s;
+      position: relative;
+    }
+
+    .drop-zone:hover,
+    .drop-zone.dragging {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .drop-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    .drop-icon {
+      margin: 0 auto 1.25rem;
+      width: 40px;
+      height: 40px;
+      color: var(--text-muted);
+      transition: color .2s;
+    }
+
+    .drop-zone:hover .drop-icon,
+    .drop-zone.dragging .drop-icon { color: var(--accent); }
+
+    .drop-title {
+      font-size: .88rem;
+      font-weight: 500;
+      color: var(--text-dim);
+      margin-bottom: .3rem;
+    }
+
+    .drop-hint {
+      font-size: .76rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Preview card ───────────────────────────────────── */
+    .preview-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: .875rem 1rem;
+      display: none;
+      align-items: center;
+      gap: .875rem;
+      animation: fadeUp .25s ease;
+    }
+
+    .preview-card.visible { display: flex; }
+
+    .preview-thumb {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-sm);
+      object-fit: cover;
+      flex-shrink: 0;
+      background: var(--surface-2);
+    }
+
+    .preview-info { flex: 1; min-width: 0; }
+
+    .preview-name {
+      font-size: .84rem;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .preview-size {
+      font-size: .74rem;
+      color: var(--text-muted);
+      margin-top: .2rem;
+    }
+
+    .btn-clear {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: .4rem;
+      border-radius: 6px;
+      line-height: 0;
+      transition: color .2s, background .2s;
+      flex-shrink: 0;
+    }
+
+    .btn-clear:hover { color: var(--text); background: var(--surface-2); }
+
+    /* ── Convert button ─────────────────────────────────── */
+    .btn-convert {
+      display: none;
+      width: 100%;
+      padding: .82rem;
+      background: var(--accent);
+      color: #fff;
+      font-family: inherit;
+      font-size: .88rem;
+      font-weight: 500;
+      letter-spacing: -.01em;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+    }
+
+    .btn-convert.visible { display: block; }
+    .btn-convert:hover   { opacity: .86; }
+    .btn-convert:active  { transform: scale(.99); }
+    .btn-convert:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+
+    /* ── Progress ───────────────────────────────────────── */
+    .progress-wrap {
+      display: none;
+      flex-direction: column;
+      gap: .5rem;
+    }
+
+    .progress-wrap.visible { display: flex; }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: .76rem;
+      color: var(--text-muted);
+    }
+
+    .progress-bar {
+      height: 2px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 99px;
+      width: 0%;
+      transition: width .12s ease;
+    }
+
+    /* ── Error ──────────────────────────────────────────── */
+    .error-msg {
+      display: none;
+      font-size: .82rem;
+      color: var(--error);
+      background: rgba(239,68,68,.07);
+      border: 1px solid rgba(239,68,68,.18);
+      border-radius: var(--radius-sm);
+      padding: .75rem 1rem;
+    }
+
+    .error-msg.visible { display: block; }
+
+    /* ── Result card ────────────────────────────────────── */
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: none;
+      animation: fadeUp .35s ease;
+    }
+
+    .result-card.visible { display: block; }
+
+    .result-img {
+      width: 100%;
+      display: block;
+      max-height: 380px;
+      object-fit: contain;
+      background: var(--surface-2);
+    }
+
+    .result-footer {
+      padding: .8rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .result-url {
+      flex: 1;
+      font-size: .72rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: 'SF Mono', 'Fira Code', 'Fira Mono', monospace;
+    }
+
+    .btn-copy {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: inherit;
+      font-size: .74rem;
+      padding: .32rem .7rem;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: color .2s, border-color .2s;
+    }
+
+    .btn-copy:hover          { color: var(--text); border-color: var(--border-hover); }
+    .btn-copy.copied         { color: var(--success); border-color: rgba(34,197,94,.4); }
+
+    /* ── Animations ─────────────────────────────────────── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">img<span>flow</span></div>
+  <div class="status">
+    <div class="dot" id="dot"></div>
+    <span id="statusText">checking…</span>
+  </div>
+</header>
+
+<main>
+  <div class="drop-zone" id="dropZone">
+    <input type="file" id="fileInput" accept="image/png">
+    <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="17 8 12 3 7 8"/>
+      <line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+    <p class="drop-title">Drop PNG here, or click to pick</p>
+    <p class="drop-hint">PNG only — converts to JPEG via Scaleway</p>
+  </div>
+
+  <div class="preview-card" id="previewCard">
+    <img class="preview-thumb" id="previewThumb" src="" alt="">
+    <div class="preview-info">
+      <div class="preview-name" id="previewName"></div>
+      <div class="preview-size" id="previewSize"></div>
+    </div>
+    <button class="btn-clear" id="btnClear" title="Remove file">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="18" y1="6" x2="6" y2="18"/>
+        <line x1="6"  y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <button class="btn-convert" id="btnConvert">Convert to JPEG</button>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-header">
+      <span id="progressLabel">Uploading…</span>
+      <span id="progressPct"></span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+  </div>
+
+  <div class="error-msg" id="errorMsg"></div>
+
+  <div class="result-card" id="resultCard">
+    <img class="result-img" id="resultImg" src="" alt="Converted JPEG">
+    <div class="result-footer">
+      <span class="result-url" id="resultUrl"></span>
+      <button class="btn-copy" id="btnCopy">Copy URL</button>
+    </div>
+  </div>
+</main>
+
+<script>
+  const API = 'http://localhost:8080'
+
+  // ── Health check ──────────────────────────────────────
+  async function checkHealth() {
+    const dot  = document.getElementById('dot')
+    const text = document.getElementById('statusText')
+    try {
+      const r = await fetch(`${API}/health`)
+      if (r.ok) {
+        dot.className    = 'dot online'
+        text.textContent = 'API online'
+      } else throw new Error()
+    } catch {
+      dot.className    = 'dot offline'
+      text.textContent = 'API offline'
+    }
+  }
+  checkHealth()
+
+  // ── Elements ──────────────────────────────────────────
+  const dropZone     = document.getElementById('dropZone')
+  const fileInput    = document.getElementById('fileInput')
+  const previewCard  = document.getElementById('previewCard')
+  const previewThumb = document.getElementById('previewThumb')
+  const previewName  = document.getElementById('previewName')
+  const previewSize  = document.getElementById('previewSize')
+  const btnClear     = document.getElementById('btnClear')
+  const btnConvert   = document.getElementById('btnConvert')
+  const progressWrap = document.getElementById('progressWrap')
+  const progressFill = document.getElementById('progressFill')
+  const progressLabel= document.getElementById('progressLabel')
+  const progressPct  = document.getElementById('progressPct')
+  const errorMsg     = document.getElementById('errorMsg')
+  const resultCard   = document.getElementById('resultCard')
+  const resultImg    = document.getElementById('resultImg')
+  const resultUrl    = document.getElementById('resultUrl')
+  const btnCopy      = document.getElementById('btnCopy')
+
+  let selectedFile = null
+
+  // ── Drag & drop ───────────────────────────────────────
+  ;['dragenter', 'dragover'].forEach(e =>
+    dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('dragging') })
+  )
+  ;['dragleave', 'drop'].forEach(e =>
+    dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('dragging') })
+  )
+  dropZone.addEventListener('drop', ev => {
+    const f = ev.dataTransfer.files[0]
+    if (f) setFile(f)
+  })
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) setFile(fileInput.files[0])
+  })
+
+  // ── File selection ────────────────────────────────────
+  function fmt(b) {
+    if (b < 1024)        return b + ' B'
+    if (b < 1048576)     return (b / 1024).toFixed(1) + ' KB'
+    return (b / 1048576).toFixed(1) + ' MB'
+  }
+
+  function setFile(file) {
+    if (file.type !== 'image/png') { showError('Only PNG files are supported.'); return }
+    selectedFile = file
+    previewName.textContent = file.name
+    previewSize.textContent = fmt(file.size)
+    const reader = new FileReader()
+    reader.onloadend = () => { previewThumb.src = reader.result }
+    reader.readAsDataURL(file)
+    previewCard.classList.add('visible')
+    btnConvert.classList.add('visible')
+    hideError()
+    resetResult()
+  }
+
+  function clearFile() {
+    selectedFile    = null
+    fileInput.value = ''
+    previewCard.classList.remove('visible')
+    btnConvert.classList.remove('visible')
+    previewThumb.src = ''
+    resetResult()
+    hideError()
+  }
+
+  btnClear.addEventListener('click', clearFile)
+
+  // ── Upload ────────────────────────────────────────────
+  btnConvert.addEventListener('click', () => { if (selectedFile) upload(selectedFile) })
+
+  function upload(file) {
+    btnConvert.disabled = true
+    progressFill.style.width = '0%'
+    progressLabel.textContent = 'Uploading…'
+    progressPct.textContent   = ''
+    progressWrap.classList.add('visible')
+    hideError()
+    resetResult()
+
+    const fd  = new FormData()
+    fd.append('file', file)
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', `${API}/upload`)
+
+    xhr.upload.addEventListener('progress', e => {
+      if (!e.lengthComputable) return
+      const pct = Math.round(e.loaded / e.total * 100)
+      progressFill.style.width  = pct + '%'
+      progressPct.textContent   = pct + '%'
+    })
+
+    xhr.addEventListener('load', () => {
+      progressFill.style.width  = '100%'
+      progressLabel.textContent = 'Processing…'
+      progressPct.textContent   = ''
+
+      if (xhr.status === 200) {
+        const data = JSON.parse(xhr.responseText)
+        setTimeout(() => showResult(data.url), 400)
+      } else {
+        let msg = 'Upload failed.'
+        try { msg = JSON.parse(xhr.responseText).detail || msg } catch {}
+        showError(msg)
+        progressWrap.classList.remove('visible')
+      }
+      btnConvert.disabled = false
+    })
+
+    xhr.addEventListener('error', () => {
+      showError('Network error — is the API running on port 8080?')
+      progressWrap.classList.remove('visible')
+      btnConvert.disabled = false
+    })
+
+    xhr.send(fd)
+  }
+
+  // ── Result ────────────────────────────────────────────
+  function showResult(url) {
+    progressWrap.classList.remove('visible')
+    resultImg.src       = url
+    resultUrl.textContent = url
+    resultCard.classList.add('visible')
+  }
+
+  function resetResult() {
+    resultCard.classList.remove('visible')
+    resultImg.src         = ''
+    resultUrl.textContent = ''
+    progressWrap.classList.remove('visible')
+    progressFill.style.width = '0%'
+    btnConvert.disabled = false
+  }
+
+  // ── Error ─────────────────────────────────────────────
+  function showError(msg) {
+    errorMsg.textContent = msg
+    errorMsg.classList.add('visible')
+  }
+
+  function hideError() { errorMsg.classList.remove('visible') }
+
+  // ── Copy URL ──────────────────────────────────────────
+  btnCopy.addEventListener('click', () => {
+    navigator.clipboard.writeText(resultUrl.textContent).then(() => {
+      btnCopy.textContent = 'Copied!'
+      btnCopy.classList.add('copied')
+      setTimeout(() => {
+        btnCopy.textContent = 'Copy URL'
+        btnCopy.classList.remove('copied')
+      }, 2000)
+    })
+  })
+</script>
+</body>
+</html>

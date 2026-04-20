@@ -1,0 +1,11 @@
+# macOS stuff
+.DS_Store
+
+# sensitive stuff
+.env
+
+# compilation stuff
+/image-processor/target/
+/rest-api/__pycache__/
+
+.claude/

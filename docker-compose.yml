@@ -1,0 +1,48 @@
+services:
+  app:
+    build:
+      context: ./rest-api
+      dockerfile: Dockerfile
+      tags:
+        - rg.fr-par.scw.cloud/${ONBOARDING_REGISTRY_NAMESPACE}/rest-api:latest
+      x-bake:
+        platforms:
+          - linux/amd64
+    ports:
+      - 8080:8080
+    environment:
+      - ONBOARDING_DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
+      - ONBOARDING_BUCKET_NAME=${ONBOARDING_BUCKET_NAME:-}
+      - ONBOARDING_IMAGE_PROCESSOR_URL=http://image-processor:9090
+      - ONBOARDING_ACCESS_KEY=${ONBOARDING_ACCESS_KEY}
+      - ONBOARDING_SECRET_KEY=${ONBOARDING_SECRET_KEY}
+    depends_on:
+      - db
+      - image-processor
+  db:
+    image: postgres:18
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+  web:
+    image: nginx:alpine
+    ports:
+      - "3000:80"
+    volumes:
+      - ./web:/usr/share/nginx/html:ro
+    depends_on:
+      - app
+  image-processor:
+    build:
+      context: ./image-processor
+      dockerfile: Dockerfile
+      tags:
+        - rg.fr-par.scw.cloud/${ONBOARDING_REGISTRY_NAMESPACE}/image-processor:latest
+      x-bake:
+        platforms:
+          - linux/amd64
+    environment:
+      - PORT=${IMAGE_PROCESSOR_PORT:-9090}
+    ports:
+      - ${IMAGE_PROCESSOR_PORT:-9090}:${IMAGE_PROCESSOR_PORT:-9090}

@@ -1,0 +1,983 @@
+{
+  "version": 4,
+  "terraform_version": "1.14.8",
+  "serial": 27,
+  "lineage": "46f22f38-30a6-1d9b-d6e5-d13d99a583e4",
+  "outputs": {
+    "gateway_ip": {
+      "value": "51.15.196.16",
+      "type": "string"
+    },
+    "image_processor_private_ip": {
+      "value": "172.16.12.3",
+      "type": "string"
+    },
+    "load_balancer_ip": {
+      "value": "195.154.72.56",
+      "type": "string"
+    },
+    "rest_api_private_ip": {
+      "value": "172.16.12.2",
+      "type": "string"
+    },
+    "ssh_bastion_command_image_processor": {
+      "value": "ssh -J bastion@51.15.196.16:61000 root@172.16.12.3",
+      "type": "string"
+    },
+    "ssh_bastion_command_rest_api": {
+      "value": "ssh -J bastion@51.15.196.16:61000 root@172.16.12.2",
+      "type": "string"
+    },
+    "test_upload_command": {
+      "value": "curl -F 'file=@logo.png' http://195.154.72.56/upload",
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "scaleway_account_ssh_key",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "created_at": "2026-04-16T13:18:45Z",
+            "disabled": false,
+            "fingerprint": "256 MD5:79:1d:dc:78:1e:9b:dd:6a:b0:98:bb:48:b1:a2:c3:61 (ssh-ed25519)",
+            "id": "10817bee-9c05-480f-ae7e-5b241b5e6b13",
+            "name": "onboarding-key",
+            "organization_id": "ac44e639-2453-4812-bf5d-a6dd796cef74",
+            "project_id": "7f7e1a40-fa1f-400d-831d-5d914f377853",
+            "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILmkKqJPn8v4LY7oZxFPGl3ZclR+OyG0GmRdu3/o/xP9",
+            "updated_at": "2026-04-16T13:18:45Z"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "bnVsbA=="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_instance_placement_group",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "fr-par-1/fb57d450-d653-4b87-9c95-e1bb7bb512ab",
+            "name": "onboarding-pg",
+            "organization_id": "ac44e639-2453-4812-bf5d-a6dd796cef74",
+            "policy_mode": "optional",
+            "policy_respected": true,
+            "policy_type": "low_latency",
+            "project_id": "7f7e1a40-fa1f-400d-831d-5d914f377853",
+            "tags": [],
+            "timeouts": null,
+            "zone": "fr-par-1"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "identity": {
+            "id": "fb57d450-d653-4b87-9c95-e1bb7bb512ab",
+            "zone": "fr-par-1"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMCwiZGVmYXVsdCI6NjAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAsInJlYWQiOjYwMDAwMDAwMDAwLCJ1cGRhdGUiOjYwMDAwMDAwMDAwfX0="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_instance_security_group",
+      "name": "image_processor",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "description": "",
+            "enable_default_security": true,
+            "external_rules": false,
+            "id": "fr-par-1/55b1684d-0ad5-4ed5-814b-25bd116a880f",
+            "inbound_default_policy": "drop",
+            "inbound_rule": [
+              {
+                "action": "accept",
+                "ip": "",
+                "ip_range": "",
+                "port": 22,
+                "port_range": "",
+                "protocol": "TCP"
+              },
+              {
+                "action": "accept",
+                "ip": "",
+                "ip_range": "",
+                "port": 9090,
+                "port_range": "",
+                "protocol": "TCP"
+              }
+            ],
+            "name": "sg-image-processor",
+            "organization_id": "ac44e639-2453-4812-bf5d-a6dd796cef74",
+            "outbound_default_policy": "accept",
+            "outbound_rule": [],
+            "project_id": "7f7e1a40-fa1f-400d-831d-5d914f377853",
+            "stateful": true,
+            "tags": [],
+            "timeouts": null,
+            "zone": "fr-par-1"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMCwiZGVmYXVsdCI6NjAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAsInJlYWQiOjYwMDAwMDAwMDAwLCJ1cGRhdGUiOjYwMDAwMDAwMDAwfX0="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_instance_security_group",
+      "name": "rest_api",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "description": "",
+            "enable_default_security": true,
+            "external_rules": false,
+            "id": "fr-par-1/16843c20-85c2-4685-bf51-627c34bacc22",
+            "inbound_default_policy": "drop",
+            "inbound_rule": [
+              {
+                "action": "accept",
+                "ip": "",
+                "ip_range": "",
+                "port": 22,
+                "port_range": "",
+                "protocol": "TCP"
+              },
+              {
+                "action": "accept",
+                "ip": "",
+                "ip_range": "",
+                "port": 8080,
+                "port_range": "",
+                "protocol": "TCP"
+              }
+            ],
+            "name": "sg-rest-api",
+            "organization_id": "ac44e639-2453-4812-bf5d-a6dd796cef74",
+            "outbound_default_policy": "accept",
+            "outbound_rule": [],
+            "project_id": "7f7e1a40-fa1f-400d-831d-5d914f377853",
+            "stateful": true,
+            "tags": [],
+            "timeouts": null,
+            "zone": "fr-par-1"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMCwiZGVmYXVsdCI6NjAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAsInJlYWQiOjYwMDAwMDAwMDAwLCJ1cGRhdGUiOjYwMDAwMDAwMDAwfX0="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_instance_server",
+      "name": "image_processor",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "additional_volume_ids": [],
+            "admin_password_encryption_ssh_key_id": null,
+            "boot_type": "local",
+            "bootscript_id": null,
+            "cloud_init": null,
+            "enable_dynamic_ip": false,
+            "filesystems": [],
+            "id": "fr-par-1/be0b120b-d910-40d4-855a-c88b4238a764",
+            "image": "ubuntu_jammy",
+            "ip_id": "",
+            "ip_ids": [],
+            "name": "onboarding-image-processor",
+            "organization_id": "ac44e639-2453-4812-bf5d-a6dd796cef74",
+            "placement_group_id": "fr-par-1/fb57d450-d653-4b87-9c95-e1bb7bb512ab",
+            "placement_group_policy_respected": false,
+            "private_ips": [],
+            "private_network": [],
+            "project_id": "7f7e1a40-fa1f-400d-831d-5d914f377853",
+            "protected": false,
+            "public_ips": [],
+            "replace_on_type_change": false,
+            "root_volume": [
+              {
+                "boot": false,
+                "delete_on_termination": true,
+                "name": "Ubuntu 22.04 Jammy Jellyfish_sbs_volume_0",
+                "sbs_iops": 5000,
+                "size_in_gb": 20,
+                "volume_id": "fr-par-1/c825fb1e-c244-4bf2-9105-23750c8cfec2",
+                "volume_type": "sbs_volume"
+              }
+            ],
+            "security_group_id": "fr-par-1/55b1684d-0ad5-4ed5-814b-25bd116a880f",
+            "state": "started",
+            "tags": null,
+            "timeouts": null,
+            "type": "DEV1-S",
+            "user_data": {
+              "cloud-init": "#cloud-config\n\nruncmd:\n  - curl -fsSL https://get.docker.com | sh\n  - docker login rg.fr-par.scw.cloud/namespace-trusting-wing -u nologin --password-stdin \u003c\u003c\u003c \"da2483c3-469f-4335-bd91-94ec78312b72\"\n  - docker run -d --restart unless-stopped\n      -p 9090:9090\n      --name image-processor\n      --log-driver json-file --log-opt max-size=10m --log-opt max-file=3\n      rg.fr-par.scw.cloud/namespace-trusting-wing/image-processor:latest\n"
+            },
+            "zone": "fr-par-1"
+          },
+          "sensitive_attributes": [
+            [
+              {
+                "type": "get_attr",
+                "value": "user_data"
+              },
+              {
+                "type": "index",
+                "value": {
+                  "value": "cloud-init",
+                  "type": "string"
+                }
+              }
+            ]
+          ],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxMjAwMDAwMDAwMDAwLCJkZWZhdWx0IjoxMjAwMDAwMDAwMDAwLCJkZWxldGUiOjEyMDAwMDAwMDAwMDAsInJlYWQiOjEyMDAwMDAwMDAwMDAsInVwZGF0ZSI6MTIwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "scaleway_instance_placement_group.main",
+            "scaleway_instance_security_group.image_processor",
+            "scaleway_vpc.main",
+            "scaleway_vpc_gateway_network.main",
+            "scaleway_vpc_private_network.main",
+            "scaleway_vpc_public_gateway.main",
+            "scaleway_vpc_public_gateway_ip.main"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_ipam_ip",
+      "name": "image_processor",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "address": "172.16.12.3",
+            "address_cidr": "172.16.12.3/22",
+            "created_at": "2026-04-16T13:18:47Z",
+            "custom_resource": [],
+            "id": "fr-par/0fc59ba1-f514-40c4-b873-a9d163d80fed",
+            "is_ipv6": false,
+            "project_id": "7f7e1a40-fa1f-400d-831d-5d914f377853",
+            "region": "fr-par",
+            "resource": [],
+            "reverses": [],
+            "source": [
+              {
+                "private_network_id": "107f902f-3fb8-4385-8ae2-f2cd32b70a6c",
+                "subnet_id": "de414637-39a2-4fcc-afdd-1b69671cb856",
+                "zonal": ""
+              }
+            ],
+            "tags": null,
+            "updated_at": "2026-04-16T13:18:47Z",
+            "zone": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "identity": {
+            "id": "0fc59ba1-f514-40c4-b873-a9d163d80fed",
+            "region": "fr-par"
+          },
+          "private": "bnVsbA==",
+          "dependencies": [
+            "scaleway_vpc.main",
+            "scaleway_vpc_private_network.main"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_ipam_ip",
+      "name": "rest_api",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "address": "172.16.12.2",
+            "address_cidr": "172.16.12.2/22",
+            "created_at": "2026-04-16T13:18:47Z",
+            "custom_resource": [],
+            "id": "fr-par/0e317ee5-6220-42fa-b432-bf2c89f83ab8",
+            "is_ipv6": false,
+            "project_id": "7f7e1a40-fa1f-400d-831d-5d914f377853",
+            "region": "fr-par",
+            "resource": [],
+            "reverses": [],
+            "source": [
+              {
+                "private_network_id": "107f902f-3fb8-4385-8ae2-f2cd32b70a6c",
+                "subnet_id": "de414637-39a2-4fcc-afdd-1b69671cb856",
+                "zonal": ""
+              }
+            ],
+            "tags": null,
+            "updated_at": "2026-04-16T13:18:47Z",
+            "zone": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "identity": {
+            "id": "0e317ee5-6220-42fa-b432-bf2c89f83ab8",
+            "region": "fr-par"
+          },
+          "private": "bnVsbA==",
+          "dependencies": [
+            "scaleway_vpc.main",
+            "scaleway_vpc_private_network.main"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_lb",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "assign_flexible_ip": null,
+            "assign_flexible_ipv6": null,
+            "description": "",
+            "external_private_networks": false,
+            "id": "fr-par-1/a3658cf7-b40c-4e1c-b843-f1036dd927c7",
+            "ip_address": "195.154.72.56",
+            "ip_id": "fr-par-1/96b64491-2eb1-4be2-b3b7-17684211303a",
+            "ip_ids": [
+              "fr-par-1/96b64491-2eb1-4be2-b3b7-17684211303a"
+            ],
+            "ipv6_address": "",
+            "name": "onboarding-lb",
+            "organization_id": "ac44e639-2453-4812-bf5d-a6dd796cef74",
+            "private_ips": [
+              {
+                "address": "172.16.12.6",
+                "id": "fr-par/0e12e727-5cd8-417d-a600-f6fbc6df8a55"
+              }
+            ],
+            "private_network": [
+              {
+                "dhcp_config": true,
+                "ipam_ids": [
+                  "fr-par/0e12e727-5cd8-417d-a600-f6fbc6df8a55"
+                ],
+                "private_network_id": "fr-par/107f902f-3fb8-4385-8ae2-f2cd32b70a6c",
+                "static_config": [],
+                "status": "ready",
+                "zone": "fr-par-1"
+              }
+            ],
+            "project_id": "7f7e1a40-fa1f-400d-831d-5d914f377853",
+            "region": "fr-par",
+            "release_ip": false,
+            "ssl_compatibility_level": "ssl_compatibility_level_intermediate",
+            "tags": [],
+            "timeouts": null,
+            "type": "LB-S",
+            "zone": "fr-par-1"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "identity": {
+            "id": "a3658cf7-b40c-4e1c-b843-f1036dd927c7",
+            "zone": "fr-par-1"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo5MDAwMDAwMDAwMDAsImRlZmF1bHQiOjkwMDAwMDAwMDAwMCwiZGVsZXRlIjo5MDAwMDAwMDAwMDAsInJlYWQiOjkwMDAwMDAwMDAwMCwidXBkYXRlIjo5MDAwMDAwMDAwMDB9LCJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "scaleway_lb_ip.main",
+            "scaleway_vpc.main",
+            "scaleway_vpc_private_network.main"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_lb_backend",
+      "name": "rest_api",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "failover_host": "",
+            "forward_port": 8080,
+            "forward_port_algorithm": "roundrobin",
+            "forward_protocol": "http",
+            "health_check_delay": "1m0s",
+            "health_check_http": [
+              {
+                "code": 200,
+                "host_header": "",
+                "method": "GET",
+                "uri": "/health"
+              }
+            ],
+            "health_check_https": [],
+            "health_check_max_retries": 2,
+            "health_check_port": 8080,
+            "health_check_send_proxy": false,
+            "health_check_tcp": [],
+            "health_check_timeout": "30s",
+            "health_check_transient_delay": "500ms",
+            "id": "fr-par-1/488d9ea3-0f05-4b93-9fce-e17331498a31",
+            "ignore_ssl_server_verify": false,
+            "lb_id": "fr-par-1/a3658cf7-b40c-4e1c-b843-f1036dd927c7",
+            "max_connections": 0,
+            "max_retries": 3,
+            "name": "backend-rest-api",
+            "on_marked_down_action": "none",
+            "proxy_protocol": "none",
+            "redispatch_attempt_count": 0,
+            "send_proxy_v2": false,
+            "server_ips": [
+              "172.16.12.2"
+            ],
+            "ssl_bridging": false,
+            "sticky_sessions": "none",
+            "sticky_sessions_cookie_name": "",
+            "timeout_connect": "5s",
+            "timeout_queue": "0s",
+            "timeout_server": "5m0s",
+            "timeout_tunnel": "15m0s",
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "identity": {
+            "id": "488d9ea3-0f05-4b93-9fce-e17331498a31",
+            "zone": "fr-par-1"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo5MDAwMDAwMDAwMDAsImRlZmF1bHQiOjkwMDAwMDAwMDAwMCwiZGVsZXRlIjo5MDAwMDAwMDAwMDAsInJlYWQiOjkwMDAwMDAwMDAwMCwidXBkYXRlIjo5MDAwMDAwMDAwMDB9LCJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "scaleway_ipam_ip.rest_api",
+            "scaleway_lb.main",
+            "scaleway_lb_ip.main",
+            "scaleway_vpc.main",
+            "scaleway_vpc_private_network.main"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_lb_frontend",
+      "name": "rest_api",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "acl": [],
+            "backend_id": "fr-par-1/488d9ea3-0f05-4b93-9fce-e17331498a31",
+            "certificate_id": "",
+            "certificate_ids": null,
+            "connection_rate_limit": 0,
+            "created_at": "2026-04-16T13:38:22Z",
+            "enable_access_logs": false,
+            "enable_http3": false,
+            "external_acls": false,
+            "id": "fr-par-1/cf686e66-98c1-40e6-98ff-9014e973ba9a",
+            "inbound_port": 80,
+            "lb_id": "fr-par-1/a3658cf7-b40c-4e1c-b843-f1036dd927c7",
+            "name": "frontend-http",
+            "timeout_client": "",
+            "timeouts": null,
+            "updated_at": "2026-04-16T13:38:22Z"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "identity": {
+            "id": "cf686e66-98c1-40e6-98ff-9014e973ba9a",
+            "zone": "fr-par-1"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo5MDAwMDAwMDAwMDAsImRlZmF1bHQiOjkwMDAwMDAwMDAwMCwiZGVsZXRlIjo5MDAwMDAwMDAwMDAsInJlYWQiOjkwMDAwMDAwMDAwMCwidXBkYXRlIjo5MDAwMDAwMDAwMDB9LCJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "scaleway_ipam_ip.rest_api",
+            "scaleway_lb.main",
+            "scaleway_lb_backend.rest_api",
+            "scaleway_lb_ip.main",
+            "scaleway_vpc.main",
+            "scaleway_vpc_private_network.main"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_lb_ip",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "id": "fr-par-1/96b64491-2eb1-4be2-b3b7-17684211303a",
+            "ip_address": "195.154.72.56",
+            "is_ipv6": false,
+            "lb_id": "a3658cf7-b40c-4e1c-b843-f1036dd927c7",
+            "organization_id": "ac44e639-2453-4812-bf5d-a6dd796cef74",
+            "project_id": "7f7e1a40-fa1f-400d-831d-5d914f377853",
+            "region": "fr-par",
+            "reverse": "195-154-72-56.lb.fr-par.scw.cloud",
+            "tags": [],
+            "timeouts": null,
+            "zone": "fr-par-1"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "identity": {
+            "id": "96b64491-2eb1-4be2-b3b7-17684211303a",
+            "zone": "fr-par-1"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo5MDAwMDAwMDAwMDAsImRlZmF1bHQiOjkwMDAwMDAwMDAwMCwiZGVsZXRlIjo5MDAwMDAwMDAwMDAsInJlYWQiOjkwMDAwMDAwMDAwMCwidXBkYXRlIjo5MDAwMDAwMDAwMDB9LCJzY2hlbWFfdmVyc2lvbiI6IjEifQ=="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_object_bucket",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "acl": "private",
+            "api_endpoint": "https://s3.fr-par.scw.cloud",
+            "cors_rule": [],
+            "endpoint": "https://engineeringonboarding.s3.fr-par.scw.cloud",
+            "force_destroy": false,
+            "id": "fr-par/engineeringonboarding",
+            "lifecycle_rule": [],
+            "name": "engineeringonboarding",
+            "object_lock_enabled": false,
+            "project_id": "7f7e1a40-fa1f-400d-831d-5d914f377853",
+            "region": "fr-par",
+            "tags": {},
+            "timeouts": null,
+            "versioning": [
+              {
+                "enabled": false
+              }
+            ]
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlZmF1bHQiOjYwMDAwMDAwMDAwMCwiZGVsZXRlIjo2MDAwMDAwMDAwMDAsInJlYWQiOjYwMDAwMDAwMDAwMCwidXBkYXRlIjo2MDAwMDAwMDAwMDB9fQ=="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_rdb_database",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "fr-par/661a6e4a-19b2-4cb5-b06e-63e22b7fa27e/onboarding",
+            "instance_id": "fr-par/661a6e4a-19b2-4cb5-b06e-63e22b7fa27e",
+            "managed": true,
+            "name": "onboarding",
+            "owner": "_rdb_superadmin",
+            "region": "fr-par",
+            "size": "7642471",
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "identity": {
+            "id": "661a6e4a-19b2-4cb5-b06e-63e22b7fa27e/onboarding",
+            "region": "fr-par"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxODAwMDAwMDAwMDAwLCJkZWZhdWx0IjoxODAwMDAwMDAwMDAwLCJkZWxldGUiOjE4MDAwMDAwMDAwMDAsInJlYWQiOjE4MDAwMDAwMDAwMDAsInVwZGF0ZSI6MTgwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "scaleway_rdb_instance.main",
+            "scaleway_vpc.main",
+            "scaleway_vpc_gateway_network.main",
+            "scaleway_vpc_private_network.main",
+            "scaleway_vpc_public_gateway.main",
+            "scaleway_vpc_public_gateway_ip.main"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_rdb_instance",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "backup_same_region": false,
+            "backup_schedule_frequency": 24,
+            "backup_schedule_retention": 7,
+            "certificate": "-----BEGIN CERTIFICATE-----\nMIIDYDCCAkigAwIBAgIUPyqu6XydS1T1H39JFUeWwS3Nx8gwDQYJKoZIhvcNAQEL\nBQAwVjELMAkGA1UEBhMCRlIxDjAMBgNVBAgMBVBhcmlzMQ4wDAYDVQQHDAVQYXJp\nczERMA8GA1UECgwIU2NhbGV3YXkxFDASBgNVBAMMCzE3Mi4xNi4xMi41MB4XDTI2\nMDQxNjEzMjAxOVoXDTM2MDQxMzEzMjAxOVowVjELMAkGA1UEBhMCRlIxDjAMBgNV\nBAgMBVBhcmlzMQ4wDAYDVQQHDAVQYXJpczERMA8GA1UECgwIU2NhbGV3YXkxFDAS\nBgNVBAMMCzE3Mi4xNi4xMi41MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKC\nAQEAx3Td0kTSOJTfHYgLsOT0E64sVuXN1DjybzWWitUKU92nEcwNf4xvkCyo1hb5\nYTCAzcU9drGrt5DeFc0n7iiFwlNBTImkD9QVF+3x69RWoNomxvYdOveeaFKZraj0\n/SLE5W0nyqH0W+VGQsFAELCFLbJSbAF3J7la4t0THcexQYfU7W1y06bl6q79Gd3b\nIMecRCSVLqCPA+kFYLOXCxCihSw9kQcTXQh57Tbkhq8+0VN94Hr/C7YplF/EIKkR\nIHRvfP5xeEeesZeCKXwmMHQ65TefAHTkBFNcYOM7GZh5oEffTV/M6CiA9OLjz3lS\niszIXy/uE3LY1stMt4zIni3HIQIDAQABoyYwJDAiBgNVHREEGzAZggsxNzIuMTYu\nMTIuNYcEMw/9v4cErBAMBTANBgkqhkiG9w0BAQsFAAOCAQEAwSs+NPlyydnNUOD/\nI9N5fA0KtoK9w+SZ8StdevkF2RM/nbDAW2mCjI3ddcSEDuN8L75KhBpLEg+8GOKY\nDkFlqts+ZQPqbrGMjtRx/3tWgh863U4lKeXorunFQjn8GkVos/EvNUpmvqWHCeXQ\nT5eC2/csiNJqME1WH9Fq2nG1XDnM2yX3tHPti0yVGWZWKHtsbsYKhL4hTvDL7tFi\nCzOhuZSdlfwFfG+KWUaacqUi67O8npfNiURyvr8dsE/vMRBNPd9RH2oNmTgVUtTU\nk0t8FSV/niWNcwcbmMFcwDkf1BDxhonGXBqDqVwZUqnkD3WbdPGxVMHhwr6kdQ0G\nPyPijw==\n-----END CERTIFICATE-----\n",
+            "disable_backup": true,
+            "encryption_at_rest": false,
+            "endpoint_ip": "",
+            "endpoint_port": 0,
+            "engine": "PostgreSQL-15",
+            "id": "fr-par/661a6e4a-19b2-4cb5-b06e-63e22b7fa27e",
+            "init_settings": {},
+            "is_ha_cluster": false,
+            "load_balancer": [],
+            "logs_policy": [
+              {
+                "max_age_retention": 30,
+                "total_disk_retention": 0
+              }
+            ],
+            "name": "onboarding-db",
+            "node_type": "db-dev-s",
+            "organization_id": "ac44e639-2453-4812-bf5d-a6dd796cef74",
+            "password": "0nb04rd1ng!Scw",
+            "password_wo": null,
+            "password_wo_version": null,
+            "private_ip": [
+              {
+                "address": "172.16.12.5",
+                "id": "fr-par/02d90b27-1c81-497f-b325-38a91160b110"
+              }
+            ],
+            "private_network": [
+              {
+                "enable_ipam": true,
+                "endpoint_id": "f31ddc0c-5e91-440f-af66-ac1e8d21d2c4",
+                "hostname": "",
+                "ip": "172.16.12.5",
+                "ip_net": "172.16.12.5/22",
+                "name": "",
+                "pn_id": "fr-par/107f902f-3fb8-4385-8ae2-f2cd32b70a6c",
+                "port": 5432,
+                "zone": ""
+              }
+            ],
+            "project_id": "7f7e1a40-fa1f-400d-831d-5d914f377853",
+            "read_replicas": [],
+            "region": "fr-par",
+            "settings": {
+              "effective_cache_size": "1300",
+              "maintenance_work_mem": "150",
+              "max_connections": "100",
+              "max_parallel_workers": "0",
+              "max_parallel_workers_per_gather": "0",
+              "work_mem": "4"
+            },
+            "snapshot_id": null,
+            "tags": [],
+            "timeouts": null,
+            "upgradable_versions": [
+              {
+                "id": "d71ceea7-8b9a-44ad-87a8-deb439820453",
+                "minor_version": "16.13",
+                "name": "PostgreSQL-16",
+                "version": "16"
+              },
+              {
+                "id": "5bf53558-194c-4d56-93d3-e653c3e3d341",
+                "minor_version": "17.9",
+                "name": "PostgreSQL-17",
+                "version": "17"
+              }
+            ],
+            "user_name": "onboarding",
+            "volume_size_in_gb": 5,
+            "volume_type": "lssd"
+          },
+          "sensitive_attributes": [
+            [
+              {
+                "type": "get_attr",
+                "value": "password"
+              }
+            ]
+          ],
+          "identity_schema_version": 0,
+          "identity": {
+            "id": "661a6e4a-19b2-4cb5-b06e-63e22b7fa27e",
+            "region": "fr-par"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjoxODAwMDAwMDAwMDAwLCJkZWZhdWx0IjoxODAwMDAwMDAwMDAwLCJkZWxldGUiOjE4MDAwMDAwMDAwMDAsInJlYWQiOjE4MDAwMDAwMDAwMDAsInVwZGF0ZSI6MTgwMDAwMDAwMDAwMH19",
+          "dependencies": [
+            "scaleway_vpc.main",
+            "scaleway_vpc_gateway_network.main",
+            "scaleway_vpc_private_network.main",
+            "scaleway_vpc_public_gateway.main",
+            "scaleway_vpc_public_gateway_ip.main"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_registry_namespace",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "description": "",
+            "endpoint": "rg.fr-par.scw.cloud/namespace-trusting-wing",
+            "id": "fr-par/7c97f226-7d13-4da2-8e6a-e12ef0a24099",
+            "is_public": false,
+            "name": "namespace-trusting-wing",
+            "organization_id": "ac44e639-2453-4812-bf5d-a6dd796cef74",
+            "project_id": "7f7e1a40-fa1f-400d-831d-5d914f377853",
+            "region": "fr-par",
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjozMDAwMDAwMDAwMDAsImRlZmF1bHQiOjMwMDAwMDAwMDAwMCwiZGVsZXRlIjozMDAwMDAwMDAwMDAsInJlYWQiOjMwMDAwMDAwMDAwMCwidXBkYXRlIjozMDAwMDAwMDAwMDB9fQ=="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_vpc",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "created_at": "2026-04-16T13:18:45Z",
+            "enable_custom_routes_propagation": true,
+            "enable_routing": true,
+            "id": "fr-par/f972705a-5bce-4d52-897f-d30aa1e614d3",
+            "is_default": false,
+            "name": "onboarding-vpc",
+            "organization_id": "ac44e639-2453-4812-bf5d-a6dd796cef74",
+            "project_id": "7f7e1a40-fa1f-400d-831d-5d914f377853",
+            "region": "fr-par",
+            "tags": null,
+            "updated_at": "2026-04-16T13:18:45Z"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "identity": {
+            "id": "f972705a-5bce-4d52-897f-d30aa1e614d3",
+            "region": "fr-par"
+          },
+          "private": "bnVsbA=="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_vpc_gateway_network",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "cleanup_dhcp": null,
+            "created_at": "2026-04-16T13:19:02Z",
+            "dhcp_id": null,
+            "enable_dhcp": null,
+            "enable_masquerade": true,
+            "gateway_id": "fr-par-1/96c7eebb-7feb-4031-b11d-293f76d8074e",
+            "id": "fr-par-1/d179b9ac-766e-44b3-b282-43a67176c1b9",
+            "ipam_config": [
+              {
+                "ipam_ip_id": "8993e668-c821-4d5f-a32d-f6e13a362659",
+                "push_default_route": false
+              }
+            ],
+            "mac_address": "02:00:00:13:1F:E4",
+            "private_ip": [
+              {
+                "address": "172.16.12.4",
+                "id": "fr-par/8993e668-c821-4d5f-a32d-f6e13a362659"
+              }
+            ],
+            "private_network_id": "fr-par/107f902f-3fb8-4385-8ae2-f2cd32b70a6c",
+            "static_address": null,
+            "status": "ready",
+            "timeouts": null,
+            "updated_at": "2026-04-16T13:19:12Z",
+            "zone": "fr-par-1"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "identity": {
+            "id": "d179b9ac-766e-44b3-b282-43a67176c1b9",
+            "zone": "fr-par-1"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlZmF1bHQiOjYwMDAwMDAwMDAwMCwiZGVsZXRlIjo2MDAwMDAwMDAwMDAsInJlYWQiOjYwMDAwMDAwMDAwMCwidXBkYXRlIjo2MDAwMDAwMDAwMDB9fQ==",
+          "dependencies": [
+            "scaleway_vpc.main",
+            "scaleway_vpc_private_network.main",
+            "scaleway_vpc_public_gateway.main",
+            "scaleway_vpc_public_gateway_ip.main"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_vpc_private_network",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "created_at": "2026-04-16T13:18:45Z",
+            "enable_default_route_propagation": false,
+            "id": "fr-par/107f902f-3fb8-4385-8ae2-f2cd32b70a6c",
+            "ipv4_subnet": [
+              {
+                "address": "172.16.12.0",
+                "created_at": "2026-04-16T13:18:45Z",
+                "id": "de414637-39a2-4fcc-afdd-1b69671cb856",
+                "prefix_length": 22,
+                "subnet": "172.16.12.0/22",
+                "subnet_mask": "255.255.252.0",
+                "updated_at": "2026-04-16T13:18:45Z"
+              }
+            ],
+            "ipv6_subnets": [
+              {
+                "address": "fdbe:872a:3fef:4411::",
+                "created_at": "2026-04-16T13:18:45Z",
+                "id": "11072f74-1cd7-47fc-8582-d25867006504",
+                "prefix_length": 64,
+                "subnet": "fdbe:872a:3fef:4411::/64",
+                "subnet_mask": "255.255.255.255.255.255.255.255.0.0.0.0.0.0.0.0",
+                "updated_at": "2026-04-16T13:18:45Z"
+              }
+            ],
+            "is_regional": true,
+            "name": "onboarding-pn",
+            "organization_id": "ac44e639-2453-4812-bf5d-a6dd796cef74",
+            "project_id": "7f7e1a40-fa1f-400d-831d-5d914f377853",
+            "region": "fr-par",
+            "tags": [],
+            "updated_at": "2026-04-16T13:19:08Z",
+            "vpc_id": "fr-par/f972705a-5bce-4d52-897f-d30aa1e614d3",
+            "zone": "fr-par-1"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "identity": {
+            "id": "107f902f-3fb8-4385-8ae2-f2cd32b70a6c",
+            "region": "fr-par"
+          },
+          "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "scaleway_vpc.main"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_vpc_public_gateway",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "allowed_ip_ranges": [
+              "0.0.0.0/0"
+            ],
+            "bandwidth": 100,
+            "bastion_enabled": true,
+            "bastion_port": 61000,
+            "created_at": "2026-04-16T13:18:46Z",
+            "enable_smtp": false,
+            "id": "fr-par-1/96c7eebb-7feb-4031-b11d-293f76d8074e",
+            "ip_id": "fr-par-1/64c6d123-d795-4d77-b650-6e92b74ff426",
+            "move_to_ipam": null,
+            "name": "onboarding-pgw",
+            "organization_id": "ac44e639-2453-4812-bf5d-a6dd796cef74",
+            "project_id": "7f7e1a40-fa1f-400d-831d-5d914f377853",
+            "refresh_ssh_keys": null,
+            "status": "running",
+            "tags": [],
+            "timeouts": null,
+            "type": "VPC-GW-S",
+            "updated_at": "2026-04-16T13:19:13Z",
+            "upstream_dns_servers": [],
+            "zone": "fr-par-1"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "identity": {
+            "id": "96c7eebb-7feb-4031-b11d-293f76d8074e",
+            "zone": "fr-par-1"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlZmF1bHQiOjYwMDAwMDAwMDAwMCwiZGVsZXRlIjo2MDAwMDAwMDAwMDAsInJlYWQiOjYwMDAwMDAwMDAwMCwidXBkYXRlIjo2MDAwMDAwMDAwMDB9fQ==",
+          "dependencies": [
+            "scaleway_vpc_public_gateway_ip.main"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_vpc_public_gateway_ip",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "address": "51.15.196.16",
+            "created_at": "2026-04-16T13:18:46Z",
+            "id": "fr-par-1/64c6d123-d795-4d77-b650-6e92b74ff426",
+            "organization_id": "ac44e639-2453-4812-bf5d-a6dd796cef74",
+            "project_id": "7f7e1a40-fa1f-400d-831d-5d914f377853",
+            "reverse": "16-196-15-51.instances.scw.cloud",
+            "tags": [],
+            "updated_at": "2026-04-16T13:18:46Z",
+            "zone": "fr-par-1"
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "identity": {
+            "id": "64c6d123-d795-4d77-b650-6e92b74ff426",
+            "zone": "fr-par-1"
+          },
+          "private": "bnVsbA=="
+        }
+      ]
+    }
+  ],
+  "check_results": null
+}

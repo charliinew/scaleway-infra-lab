@@ -1,0 +1,98 @@
+{
+  "version": 4,
+  "terraform_version": "1.14.8",
+  "serial": 193,
+  "lineage": "46f22f38-30a6-1d9b-d6e5-d13d99a583e4",
+  "outputs": {
+    "gateway_ip": {
+      "value": "51.15.213.111",
+      "type": "string"
+    },
+    "image_processor_private_ip": {
+      "value": "172.16.0.5",
+      "type": "string"
+    },
+    "load_balancer_ip": {
+      "value": "51.15.208.143",
+      "type": "string"
+    },
+    "rest_api_private_ip": {
+      "value": "172.16.0.6",
+      "type": "string"
+    },
+    "ssh_bastion_command_image_processor": {
+      "value": "ssh -J bastion@51.15.213.111:61000 root@172.16.0.5",
+      "type": "string"
+    },
+    "ssh_bastion_command_rest_api": {
+      "value": "ssh -J bastion@51.15.213.111:61000 root@172.16.0.6",
+      "type": "string"
+    },
+    "test_upload_command": {
+      "value": "curl -F 'file=@logo.png' http://51.15.208.143/upload",
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "scaleway_object_bucket",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "acl": "private",
+            "api_endpoint": "https://s3.fr-par.scw.cloud",
+            "cors_rule": [],
+            "endpoint": "https://engineeringonboarding.s3.fr-par.scw.cloud",
+            "force_destroy": true,
+            "id": "fr-par/engineeringonboarding",
+            "lifecycle_rule": [],
+            "name": "engineeringonboarding",
+            "object_lock_enabled": false,
+            "project_id": "7f7e1a40-fa1f-400d-831d-5d914f377853",
+            "region": "fr-par",
+            "tags": null,
+            "timeouts": null,
+            "versioning": [
+              {
+                "enabled": false
+              }
+            ]
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlZmF1bHQiOjYwMDAwMDAwMDAwMCwiZGVsZXRlIjo2MDAwMDAwMDAwMDAsInJlYWQiOjYwMDAwMDAwMDAwMCwidXBkYXRlIjo2MDAwMDAwMDAwMDB9fQ=="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "scaleway_registry_namespace",
+      "name": "main",
+      "provider": "provider[\"registry.terraform.io/scaleway/scaleway\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "description": "",
+            "endpoint": "rg.fr-par.scw.cloud/namespace-trusting-wing",
+            "id": "fr-par/36fc814c-a382-4e44-966e-2cdd83b6a1c8",
+            "is_public": false,
+            "name": "namespace-trusting-wing",
+            "organization_id": "ac44e639-2453-4812-bf5d-a6dd796cef74",
+            "project_id": "7f7e1a40-fa1f-400d-831d-5d914f377853",
+            "region": "fr-par",
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjozMDAwMDAwMDAwMDAsImRlZmF1bHQiOjMwMDAwMDAwMDAwMCwiZGVsZXRlIjozMDAwMDAwMDAwMDAsInJlYWQiOjMwMDAwMDAwMDAwMCwidXBkYXRlIjozMDAwMDAwMDAwMDB9fQ=="
+        }
+      ]
+    }
+  ],
+  "check_results": null
+}
