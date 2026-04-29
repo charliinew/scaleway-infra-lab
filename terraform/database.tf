@@ -1,6 +1,6 @@
 # ── Managed PostgreSQL ─────────────────────────────────────────────────────────
 resource "scaleway_rdb_instance" "main" {
-  name           = "onboarding-db"
+  name           = "onboarding-db-${local.suffix}"
   node_type      = "DB-DEV-S"
   engine         = "PostgreSQL-15"
   is_ha_cluster  = false

@@ -3,7 +3,7 @@
 # à Secret Manager). Les autres credentials sensibles sont ici.
 
 resource "scaleway_secret" "database_url" {
-  name = "onboarding-database-url"
+  name = "onboarding-database-url-${local.suffix}"
 }
 
 resource "scaleway_secret_version" "database_url" {
@@ -12,7 +12,7 @@ resource "scaleway_secret_version" "database_url" {
 }
 
 resource "scaleway_secret" "bucket_name" {
-  name = "onboarding-bucket-name"
+  name = "onboarding-bucket-name-${local.suffix}"
 }
 
 resource "scaleway_secret_version" "bucket_name" {

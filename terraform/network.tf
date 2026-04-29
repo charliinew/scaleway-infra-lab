@@ -1,11 +1,11 @@
 # ── VPC ────────────────────────────────────────────────────────────────────────
 resource "scaleway_vpc" "main" {
-  name = "onboarding-vpc"
+  name = "onboarding-vpc-${local.suffix}"
 }
 
 # ── Private Network ────────────────────────────────────────────────────────────
 resource "scaleway_vpc_private_network" "main" {
-  name   = "onboarding-pn"
+  name   = "onboarding-pn-${local.suffix}"
   vpc_id = scaleway_vpc.main.id
 }
 
@@ -13,7 +13,7 @@ resource "scaleway_vpc_private_network" "main" {
 resource "scaleway_vpc_public_gateway_ip" "main" {}
 
 resource "scaleway_vpc_public_gateway" "main" {
-  name            = "onboarding-pgw"
+  name            = "onboarding-pgw-${local.suffix}"
   type            = "VPC-GW-S"
   ip_id           = scaleway_vpc_public_gateway_ip.main.id
   bastion_enabled = true

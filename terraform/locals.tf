@@ -1,12 +1,7 @@
-locals {
-  # Extrait l'adresse IPv4 parmi les private_ips du NIC (exclut les IPv6 qui contiennent ":")
-  image_processor_ipv4 = [
-    for ip in scaleway_instance_private_nic.image_processor.private_ips : ip.address
-    if !can(regex(":", ip.address))
-  ][0]
+resource "random_id" "suffix" {
+  byte_length = 3 # 6 hex chars, e.g. "a1b2c3"
+}
 
-  rest_api_ipv4 = [
-    for ip in scaleway_instance_private_nic.rest_api.private_ips : ip.address
-    if !can(regex(":", ip.address))
-  ][0]
+locals {
+  suffix = random_id.suffix.hex
 }

@@ -1,32 +1,28 @@
-# ── Load Balancer ──────────────────────────────────────────────────────────────
-resource "scaleway_lb_ip" "main" {}
+# ── Load Balancer IP ─────────────────────────────────────────────────────────────
+# This IP will be used by the Kubernetes LoadBalancer service
+# configured in k8s/service.yaml
+#
+# In the Kapsule architecture, the Load Balancer is managed by Kubernetes
+# through a Service of type LoadBalancer. We only reserve the IP here.
+
+resource "scaleway_lb_ip" "main" {
+  # Public IP for the load balancer
+  # This IP is attached to the Kubernetes LoadBalancer service
+}
+
+# ── Load Balancer ────────────────────────────────────────────────────────────────
+# Basic LB configuration - detailed routing handled by Kubernetes
 
 resource "scaleway_lb" "main" {
-  name    = "onboarding-lb"
-  ip_ids  = [scaleway_lb_ip.main.id]
-  type    = "LB-S"
+  name = "onboarding-lb-${local.suffix}"
+  type = "LB-S"
 
+  ip_ids = [scaleway_lb_ip.main.id]
+
+  # Attach to private network for backend communication
   private_network {
     private_network_id = scaleway_vpc_private_network.main.id
   }
-}
 
-resource "scaleway_lb_backend" "rest_api" {
-  lb_id            = scaleway_lb.main.id
-  name             = "backend-rest-api"
-  forward_protocol = "http"
-  forward_port     = 8080
-
-  server_ips = [local.rest_api_ipv4]
-
-  health_check_http {
-    uri = "/health"
-  }
-}
-
-resource "scaleway_lb_frontend" "rest_api" {
-  lb_id        = scaleway_lb.main.id
-  backend_id   = scaleway_lb_backend.rest_api.id
-  name         = "frontend-http"
-  inbound_port = 80
+  tags = ["onboarding", "production", "kapsule"]
 }

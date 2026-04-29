@@ -5,6 +5,6 @@
 # L'ID se trouve avec : scw registry namespace list
 
 resource "scaleway_registry_namespace" "main" {
-  name       = var.registry_namespace
+  name       = "${var.registry_namespace}-${local.suffix}"
   is_public  = false
 }
