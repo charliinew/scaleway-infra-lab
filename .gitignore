@@ -5,7 +5,19 @@
 .env
 
 # compilation stuff
-/image-processor/target/
 /rest-api/__pycache__/
+/image-converter/__pycache__/
+/ai-alt-generator/__pycache__/
+
+# python virtual environments
+ai-alt-generator/venv/
+
+# terraform state and backups
+terraform.tfstate
+terraform.tfstate.backup
+terraform.backup/
+*.tfstate.*.backup
 
 .claude/
+CLAUDE.md
+.zed
