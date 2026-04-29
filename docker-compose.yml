@@ -1,8 +1,8 @@
 services:
   app:
     build:
-      context: ./rest-api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: rest-api/Dockerfile
       tags:
         - rg.fr-par.scw.cloud/${ONBOARDING_REGISTRY_NAMESPACE}/rest-api:latest
       x-bake:
@@ -33,16 +33,44 @@ services:
       - ./web:/usr/share/nginx/html:ro
     depends_on:
       - app
-  image-processor:
+  # Legacy image-processor (Rust) - replaced by serverless containers
+  # image-processor:
+  #   build:
+  #     context: ./image-processor
+  #     dockerfile: Dockerfile
+  #     tags:
+  #       - rg.fr-par.scw.cloud/${ONBOARDING_REGISTRY_NAMESPACE}/image-processor:latest
+  #   environment:
+  #     - PORT=${IMAGE_PROCESSOR_PORT:-9090}
+  #   ports:
+  #     - ${IMAGE_PROCESSOR_PORT:-9090}:${IMAGE_PROCESSOR_PORT:-9090}
+
+  # New Serverless Container: Image Converter
+  image-converter:
     build:
-      context: ./image-processor
+      context: ./image-converter
       dockerfile: Dockerfile
       tags:
-        - rg.fr-par.scw.cloud/${ONBOARDING_REGISTRY_NAMESPACE}/image-processor:latest
+        - rg.fr-par.scw.cloud/${ONBOARDING_REGISTRY_NAMESPACE}/image-converter:latest
       x-bake:
         platforms:
           - linux/amd64
     environment:
-      - PORT=${IMAGE_PROCESSOR_PORT:-9090}
-    ports:
-      - ${IMAGE_PROCESSOR_PORT:-9090}:${IMAGE_PROCESSOR_PORT:-9090}
+      - PORT=8080
+      - LOG_LEVEL=info
+
+  # New Serverless Container: AI Alt-Generator
+  ai-alt-generator:
+    build:
+      context: ./ai-alt-generator
+      dockerfile: Dockerfile
+      tags:
+        - rg.fr-par.scw.cloud/${ONBOARDING_REGISTRY_NAMESPACE}/ai-alt-generator:latest
+      x-bake:
+        platforms:
+          - linux/amd64
+    environment:
+      - PORT=8080
+      - LOG_LEVEL=info
+      - QWEN_API_KEY=${QWEN_API_KEY:-}
+      - QWEN_MODEL=qwen-vl-max
