@@ -1,72 +1,256 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>imgflow — PNG to JPEG</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>imgflow — Image Converter</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6', // Teal 500
+                            600: '#0d9488',
+                            900: '#134e4a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom minimalist styles */
+        body {
+            background-color: #fafafa;
+            color: #1a1a1a;
+            -webkit-font-smoothing: antialiased;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+        .input-focus-ring:focus-within {
+            box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.2);
+            border-color: #14b8a6;
+        }
+        /* Hide scrollbar for cleaner look */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #d1d5db; }
+    </style>
 </head>
-<body>
+<body class="min-h-screen flex flex-col selection:bg-brand-100 selection:text-brand-900">
 
-<header>
-  <div class="logo">img<span>flow</span></div>
-  <div class="status">
-    <div class="dot" id="dot"></div>
-    <span id="statusText">checking…</span>
-  </div>
-</header>
+    <!-- Header -->
+    <header class="w-full py-6 px-8 flex justify-between items-center fixed top-0 w-full z-10 glass-panel">
+        <div class="flex items-center gap-2">
+            <svg class="w-6 h-6 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <h1 class="text-xl font-bold tracking-tight text-gray-900">imgflow<span class="text-brand-500">.</span></h1>
+        </div>
+        <div class="flex items-center gap-2 text-sm text-gray-500 font-medium bg-white px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
+            <div id="status-dot" class="w-2 h-2 rounded-full bg-gray-300"></div>
+            <span id="status-text">Checking API...</span>
+        </div>
+    </header>
 
-<main>
-  <div class="drop-zone" id="dropZone">
-    <input type="file" id="fileInput" accept="image/png">
-    <svg class="drop-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-      <polyline points="17 8 12 3 7 8"/>
-      <line x1="12" y1="3" x2="12" y2="15"/>
-    </svg>
-    <p class="drop-title">Drop PNG here, or click to pick</p>
-    <p class="drop-hint">PNG only — converts to JPEG via Scaleway</p>
-  </div>
+    <!-- Main Content -->
+    <main class="flex-grow flex items-center justify-center pt-24 pb-12 px-4">
+        <div class="w-full max-w-md">
+            
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Convert & Optimize</h2>
+                <p class="text-gray-500">Transform PNGs to next-gen formats with AI alt-text.</p>
+            </div>
 
-  <div class="preview-card" id="previewCard">
-    <img class="preview-thumb" id="previewThumb" src="" alt="">
-    <div class="preview-info">
-      <div class="preview-name" id="previewName"></div>
-      <div class="preview-size" id="previewSize"></div>
-    </div>
-    <button class="btn-clear" id="btnClear" title="Remove file">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <line x1="18" y1="6" x2="6" y2="18"/>
-        <line x1="6"  y1="6" x2="18" y2="18"/>
-      </svg>
-    </button>
-  </div>
+            <!-- Upload Form -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6">
+                <form id="upload-form" class="space-y-6">
+                    
+                    <!-- File Dropzone -->
+                    <div id="dropzone" class="relative group border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-brand-500 transition-colors bg-gray-50 hover:bg-brand-50 cursor-pointer">
+                        <input type="file" id="file-input" name="file" accept="image/png" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" required>
+                        <div class="pointer-events-none flex flex-col items-center">
+                            <svg class="w-10 h-10 text-gray-400 group-hover:text-brand-500 mb-3 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                            </svg>
+                            <span class="font-medium text-gray-700" id="file-name">Click or drag a PNG file</span>
+                            <span class="text-xs text-gray-400 mt-1">Max file size 10MB</span>
+                        </div>
+                    </div>
 
-  <button class="btn-convert" id="btnConvert">Convert to JPEG</button>
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Format Selection -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1.5">Format</label>
+                            <div class="relative">
+                                <select name="format" id="format" class="w-full appearance-none bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-brand-500 focus:border-brand-500 block p-2.5 outline-none transition-colors">
+                                    <option value="webp">WebP (Recommended)</option>
+                                    <option value="avif">AVIF (Best Compression)</option>
+                                    <option value="jpeg">JPEG</option>
+                                    <option value="png">PNG</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
+                            </div>
+                        </div>
 
-  <div class="progress-wrap" id="progressWrap">
-    <div class="progress-header">
-      <span id="progressLabel">Uploading…</span>
-      <span id="progressPct"></span>
-    </div>
-    <div class="progress-bar">
-      <div class="progress-fill" id="progressFill"></div>
-    </div>
-  </div>
+                        <!-- Quality Selection -->
+                        <div>
+                            <div class="flex justify-between items-center mb-1.5">
+                                <label class="block text-sm font-medium text-gray-700">Quality</label>
+                                <span id="quality-val" class="text-xs text-gray-500 font-medium">80%</span>
+                            </div>
+                            <input type="range" name="quality" id="quality" min="1" max="100" value="80" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-500">
+                        </div>
+                    </div>
 
-  <div class="error-msg" id="errorMsg"></div>
+                    <!-- AI Alt Text Toggle -->
+                    <label class="flex items-center justify-between p-4 rounded-xl border border-gray-100 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors">
+                        <div>
+                            <span class="block text-sm font-medium text-gray-900">AI Alt-Text</span>
+                            <span class="block text-xs text-gray-500 mt-0.5">Auto-generate image description</span>
+                        </div>
+                        <div class="relative">
+                            <input type="checkbox" name="generate_alt" id="generate_alt" class="sr-only peer">
+                            <div class="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
+                        </div>
+                    </label>
 
-  <div class="result-card" id="resultCard">
-    <img class="result-img" id="resultImg" src="" alt="Converted JPEG">
-    <div class="result-footer">
-      <span class="result-url" id="resultUrl"></span>
-      <button class="btn-copy" id="btnCopy">Copy URL</button>
-    </div>
-  </div>
-</main>
+                    <!-- Submit Button -->
+                    <button type="submit" id="submit-btn" class="w-full text-white bg-gray-900 hover:bg-black focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-xl text-sm px-5 py-3.5 text-center transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 shadow-sm">
+                        <span>Convert Image</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    </button>
+                </form>
+            </div>
 
-<script src="app.js"></script>
+            <!-- Results Section (Hidden by default) -->
+            <div id="results" class="hidden animate-[fadeIn_0.3s_ease-out]">
+                <h3 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 text-center">Result</h3>
+                <div class="bg-white rounded-2xl p-1 shadow-sm border border-gray-100 overflow-hidden mb-4">
+                    <img id="result-img" src="" alt="Converted image" class="w-full h-auto rounded-xl object-cover bg-gray-50 max-h-64 border border-gray-50">
+                </div>
+                
+                <div class="space-y-3">
+                    <!-- Stats -->
+                    <div id="stats-container" class="grid grid-cols-2 gap-3">
+                        <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                            <span class="block text-xs text-gray-500">Original Size</span>
+                            <span id="stat-original" class="block font-semibold text-gray-900 mt-0.5">-</span>
+                        </div>
+                        <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+                            <span class="block text-xs text-gray-500 text-brand-600">Converted Size</span>
+                            <div class="flex items-end gap-2 mt-0.5">
+                                <span id="stat-converted" class="font-semibold text-gray-900">-</span>
+                                <span id="stat-ratio" class="text-xs font-medium text-brand-600 mb-[2px]">-</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- URL -->
+                    <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-center gap-3">
+                        <div class="flex-grow min-w-0">
+                            <span class="block text-xs text-gray-500 mb-0.5">Image URL</span>
+                            <div class="truncate text-sm text-gray-900 font-mono" id="result-url">https://...</div>
+                        </div>
+                        <button onclick="copyToClipboard('result-url', this)" class="shrink-0 p-2 text-gray-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors" title="Copy URL">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        </button>
+                    </div>
+
+                    <!-- Download Button -->
+                    <a id="download-btn" href="#" download target="_blank" class="flex items-center justify-center gap-2 w-full py-3 bg-brand-50 hover:bg-brand-100 text-brand-700 font-medium rounded-xl transition-colors border border-brand-100 shadow-sm mt-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Download Converted Image
+                    </a>
+
+                    <!-- Alt Text -->
+                    <div id="alt-container" class="hidden bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex items-start gap-3">
+                        <div class="flex-grow min-w-0">
+                            <span class="block text-xs text-gray-500 mb-0.5 flex items-center gap-1">
+                                <svg class="w-3 h-3 text-purple-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.381z" clip-rule="evenodd"></path></svg>
+                                AI Description
+                            </span>
+                            <div class="text-sm text-gray-900 leading-snug" id="result-alt">Generating...</div>
+                        </div>
+                        <button onclick="copyToClipboard('result-alt', this)" class="shrink-0 p-2 text-gray-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors mt-2" title="Copy Alt Text">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        </button>
+                    </div>
+
+                    <!-- Code Snippets -->
+                    <div id="snippets-container" class="hidden space-y-3 pt-4 border-t border-gray-100">
+                        <span class="block text-xs font-bold text-gray-400 uppercase tracking-wider">Integration Code</span>
+                        
+                        <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-800 overflow-hidden">
+                            <div class="flex justify-between items-center px-3 py-2 bg-gray-800 border-b border-gray-700">
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">HTML</span>
+                                <button onclick="copyToClipboard('result-html', this)" class="text-gray-400 hover:text-white transition-colors" title="Copy HTML">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                </button>
+                            </div>
+                            <div class="p-3 overflow-x-auto">
+                                <pre class="text-xs text-gray-300 font-mono whitespace-pre-wrap"><code id="result-html"></code></pre>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-900 rounded-xl shadow-sm border border-gray-800 overflow-hidden">
+                            <div class="flex justify-between items-center px-3 py-2 bg-gray-800 border-b border-gray-700">
+                                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">React</span>
+                                <button onclick="copyToClipboard('result-react', this)" class="text-gray-400 hover:text-white transition-colors" title="Copy React">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                                </button>
+                            </div>
+                            <div class="p-3 overflow-x-auto">
+                                <pre class="text-xs text-gray-300 font-mono whitespace-pre-wrap"><code id="result-react"></code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 text-center">
+                    <button onclick="resetForm()" class="text-sm font-medium text-gray-500 hover:text-gray-900 transition-colors underline decoration-gray-300 underline-offset-4">Convert another image</button>
+                </div>
+            </div>
+
+            <!-- Error Toast -->
+            <div id="error-toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-50 text-red-800 border border-red-200 px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 w-[90%] max-w-sm z-50 animate-[slideUp_0.3s_ease-out]">
+                <svg class="w-5 h-5 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span id="error-message" class="text-sm font-medium">An error occurred</span>
+                <button onclick="hideError()" class="ml-auto text-red-500 hover:text-red-700">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+        </div>
+    </main>
+
+    <style>
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+    </style>
+    
+    <!-- Using absolute path /static/app.js since API mounts web/ at /static -->
+    <script src="/static/app.js"></script>
 </body>
 </html>
