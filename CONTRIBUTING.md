@@ -6,7 +6,9 @@ Contributions are welcome. Here's how to get started.
 
 - [mise](https://mise.jdx.dev/) to manage tool versions (see `mise.toml`)
 - Docker with buildx
-- Terraform (for infrastructure changes)
+- [Terraform](https://developer.hashicorp.com/terraform/downloads)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+- [Scaleway CLI](https://www.scaleway.com/en/docs/develop-and-test/install-tools/) (`scw`)
 
 ## Local setup
 
@@ -21,6 +23,8 @@ docker compose up
 ```bash
 pip install ruff
 ruff check rest-api/
+ruff check image-converter/
+ruff check ai-alt-generator/
 ```
 
 ## Submitting changes
@@ -34,11 +38,14 @@ ruff check rest-api/
 
 ```
 .
-├── rest-api/           # Python/FastAPI service
-├── image-processor/    # Rust/actix-web service
+├── rest-api/           # Python/FastAPI service (main API, orchestration)
+├── image-converter/    # Python Serverless Container (multi-format conversion)
+├── ai-alt-generator/   # Python Serverless Container (Qwen Vision alt-text)
+├── k8s/               # Kubernetes manifests (deployment, HPA, monitoring)
 ├── terraform/          # Infrastructure as code (Scaleway)
-├── challenges/         # Dev journal
-├── scripts/            # Utility scripts
+├── migrations/         # Database schema migrations
+├── scripts/            # Operational scripts (backup, health, rotation)
+├── docs/               # Documentation (architecture, runbooks, API)
 ├── docker-compose.yml  # Local development
 └── dot.env             # Environment variables template
 ```
