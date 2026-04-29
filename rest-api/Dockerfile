@@ -16,13 +16,14 @@ RUN apt-get update  --quiet --yes && \
 
 WORKDIR /app
 
-COPY  --chmod=0644 requirements.txt /app/requirements.txt
+COPY  --chmod=0644 rest-api/requirements.txt /app/requirements.txt
 
 RUN pip install --no-cache-dir --requirement requirements.txt
 
 RUN apt-get remove -y gcc python3-dev && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 
-COPY --chmod=0644 app.py /app/app.py
+COPY --chmod=0644 rest-api/app.py /app/app.py
+COPY --chmod=0755 web/ /app/web/
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 EXPOSE 8080
