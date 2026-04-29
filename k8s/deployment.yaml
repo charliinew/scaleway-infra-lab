@@ -1,0 +1,245 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rest-api
+  namespace: onboarding
+  labels:
+    app.kubernetes.io/name: rest-api
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: scaleway-infra-lab
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/managed-by: terraform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rest-api
+      tier: backend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: rest-api
+        tier: backend
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      # Containers
+      containers:
+        - name: rest-api
+          image: rg.fr-par.scw.cloud/onboarding/rest-api:latest
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          # Environment variables from ConfigMap
+          envFrom:
+            - configMapRef:
+                name: onboarding-config
+
+          # Environment variables from Secret
+          env:
+            # Scaleway Credentials (required by app.py)
+            - name: ONBOARDING_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: onboarding-secrets
+                  key: S3_ACCESS_KEY
+            - name: ONBOARDING_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: onboarding-secrets
+                  key: S3_SECRET_KEY
+            - name: ONBOARDING_PROJECT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: onboarding-config
+                  key: PROJECT_ID
+            # Database URL (optional — app falls back to Secret Manager API if missing)
+            - name: ONBOARDING_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: onboarding-secrets
+                  key: DATABASE_URL
+                  optional: true
+            # S3 Credentials
+            - name: S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: onboarding-secrets
+                  key: S3_ACCESS_KEY
+            - name: S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: onboarding-secrets
+                  key: S3_SECRET_KEY
+            # Bucket name (optional — app falls back to Secret Manager API if missing)
+            - name: ONBOARDING_BUCKET_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: onboarding-secrets
+                  key: S3_BUCKET_NAME
+                  optional: true
+            # Service authentication token (optional — only available when ESO syncs it from Secret Manager)
+            - name: ONBOARDING_IMAGE_PROCESSOR_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: onboarding-secrets
+                  key: IMAGE_PROCESSOR_TOKEN
+                  optional: true
+            # Image Processor URL (Scaleway Serverless Container public URL)
+            # Value is set in configmap by: make _update-configmap (reads from terraform output)
+            - name: IMAGE_PROCESSOR_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: onboarding-config
+                  key: IMAGE_CONVERTER_PUBLIC_URL
+            - name: ONBOARDING_IMAGE_PROCESSOR_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: onboarding-config
+                  key: IMAGE_CONVERTER_PUBLIC_URL
+            - name: ONBOARDING_AI_GENERATOR_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: onboarding-config
+                  key: AI_GENERATOR_PUBLIC_URL
+
+          # Resource requests and limits
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+          # Health checks
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 0
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30
+
+          # Security context
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          # Volume mounts
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
+            - name: cache-volume
+              mountPath: /app/cache
+
+          # Logging
+          args:
+            - app:app
+            - --host=0.0.0.0
+            - --port=8080
+            - --log-level=info
+
+      # Volumes
+      volumes:
+        - name: tmp-volume
+          emptyDir:
+            sizeLimit: 100Mi
+        - name: cache-volume
+          emptyDir:
+            sizeLimit: 50Mi
+
+      # DNS configuration
+      dnsPolicy: ClusterFirst
+
+      # Image pull secrets (if private registry requires auth)
+      # imagePullSecrets:
+      #   - name: registry-credentials
+
+      # Termination grace period
+      terminationGracePeriodSeconds: 30
+
+---
+# Horizontal Pod Autoscaler for rest-api
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rest-api-hpa
+  namespace: onboarding
+  labels:
+    app.kubernetes.io/name: rest-api
+    app.kubernetes.io/component: autoscaler
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rest-api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+        - type: Pods
+          value: 4
+          periodSeconds: 15
+      selectPolicy: Max

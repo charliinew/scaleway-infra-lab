@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: onboarding-config
+  namespace: onboarding
+  labels:
+    app.kubernetes.io/name: onboarding
+    app.kubernetes.io/component: rest-api
+    app.kubernetes.io/part-of: scaleway-infra-lab
+data:
+  # Scaleway Project (non-sensitive — used by app for Secret Manager API calls)
+  # TODO: set via Makefile _update-configmap from terraform output project_id
+  PROJECT_ID: "7f7e1a40-fa1f-400d-831d-5d914f377853"
+
+  # Application Configuration
+  APP_NAME: "onboarding-image-converter"
+  APP_ENV: "production"
+  DEBUG: "false"
+  LOG_LEVEL: "info"
+
+  # Server Configuration
+  HOST: "0.0.0.0"
+  PORT: "8080"
+
+  # Image Processor Configuration
+  IMAGE_PROCESSOR_URL: "http://image-converter.onboarding-converters.svc.cluster.local:8080"
+  # TODO: set IMAGE_CONVERTER_PUBLIC_URL to the Serverless Container public URL from terraform output
+  # Run: terraform -chdir=terraform output -raw image_converter_url
+  IMAGE_CONVERTER_PUBLIC_URL: ""
+  IMAGE_PROCESSOR_TIMEOUT: "30"
+
+  # AI Alt Generator Public URL
+  AI_GENERATOR_PUBLIC_URL: ""
+
+  # Supported Image Formats
+  SUPPORTED_FORMATS: "webp,avif,jpeg,png"
+  DEFAULT_FORMAT: "webp"
+  DEFAULT_QUALITY: "80"
+
+  # File Upload Configuration
+  MAX_UPLOAD_SIZE_MB: "10"
+  ALLOWED_CONTENT_TYPES: "image/png,image/jpeg,image/webp"
+
+  # AI Configuration
+  AI_ENABLED: "true"
+  AI_SERVICE_URL: "http://ai-alt-generator.onboarding-converters.svc.cluster.local:8080"
+  AI_TIMEOUT: "30"
+  AI_MAX_IMAGE_SIZE_MB: "10"
+  AI_MODEL: "qwen-vl-max"
+
+  # Alt-Text Configuration (WCAG Compliance)
+  ALT_TEXT_MAX_LENGTH: "250"
+  ALT_TEXT_MIN_LENGTH: "10"
+  GENERATE_HTML_TAG: "true"
+  GENERATE_REACT_COMPONENT: "true"
+
+  # Database Configuration (non-sensitive)
+  DB_POOL_SIZE: "10"
+  DB_MAX_OVERFLOW: "20"
+  DB_POOL_TIMEOUT: "30"
+  DB_POOL_RECYCLE: "3600"
+
+  # S3 Configuration (non-sensitive)
+  S3_ENDPOINT_URL: "https://s3.fr-par.scw.cloud"
+  S3_REGION: "fr-par"
+
+  # CORS Configuration
+  # TODO: restrict to actual frontend domain(s) in production (e.g. "https://your-domain.com")
+  CORS_ALLOW_ORIGINS: "*"
+  CORS_ALLOW_METHODS: "GET,POST,PUT,DELETE,OPTIONS"
+  CORS_ALLOW_HEADERS: "Content-Type,Authorization,X-Auth-Token"
+
+  # Rate Limiting
+  RATE_LIMIT_ENABLED: "true"
+  RATE_LIMIT_PER_MINUTE: "60"
+
+  # Health Check Configuration
+  HEALTH_CHECK_PATH: "/health"
+  HEALTH_CHECK_INTERVAL: "30"

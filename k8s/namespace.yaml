@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: onboarding
+  labels:
+    app.kubernetes.io/name: onboarding
+    app.kubernetes.io/component: image-converter
+    app.kubernetes.io/part-of: scaleway-infra-lab
+    environment: production
+    managed-by: terraform

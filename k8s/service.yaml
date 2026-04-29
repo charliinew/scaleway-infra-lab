@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rest-api
+  namespace: onboarding
+  labels:
+    app.kubernetes.io/name: rest-api
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: scaleway-infra-lab
+    app.kubernetes.io/version: "1.0.0"
+  annotations:
+    # Scaleway LoadBalancer annotations
+    service.beta.kubernetes.io/scw-loadbalancer-id: ""
+    service.beta.kubernetes.io/scw-loadbalancer-protocol: "http"
+    service.beta.kubernetes.io/scw-loadbalancer-port: "80"
+    service.beta.kubernetes.io/scw-loadbalancer-proxy-protocol: "v2"
+    # Health check annotations
+    service.beta.kubernetes.io/scw-loadbalancer-health-check-path: "/health"
+    service.beta.kubernetes.io/scw-loadbalancer-health-check-delay: "10s"
+    service.beta.kubernetes.io/scw-loadbalancer-health-check-timeout: "5s"
+    service.beta.kubernetes.io/scw-loadbalancer-health-check-fall-threshold: "3"
+    service.beta.kubernetes.io/scw-loadbalancer-health-check-rise-threshold: "2"
+spec:
+  type: LoadBalancer
+  selector:
+    app: rest-api
+    tier: backend
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080
+      appProtocol: http
+  # Session affinity for sticky sessions (optional)
+  sessionAffinity: None
+  # External IP (assigned by Scaleway LoadBalancer)
+  externalTrafficPolicy: Cluster
+  # LoadBalancer IP (will be assigned automatically)
+  # loadBalancerIP: ""
+  # LoadBalancer source ranges (restrict access if needed)
+  # loadBalancerSourceRanges:
+  #   - "0.0.0.0/0"
+
+---
+# Internal ClusterIP Service for pod-to-pod communication
+apiVersion: v1
+kind: Service
+metadata:
+  name: rest-api-internal
+  namespace: onboarding
+  labels:
+    app.kubernetes.io/name: rest-api
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: scaleway-infra-lab
+  annotations:
+    # Prometheus scraping
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "8080"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  selector:
+    app: rest-api
+    tier: backend
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+      appProtocol: http
+    - name: metrics
+      protocol: TCP
+      port: 9090
+      targetPort: 8080
+      appProtocol: http
+  clusterIP: "" # Auto-assigned
+  sessionAffinity: None
+
+---
+# Headless Service for direct pod access (used by HPA and monitoring)
+apiVersion: v1
+kind: Service
+metadata:
+  name: rest-api-headless
+  namespace: onboarding
+  labels:
+    app.kubernetes.io/name: rest-api
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: scaleway-infra-lab
+  annotations:
+    service.alpha.kubernetes.io/tolerate-unready-endpoints: "true"
+spec:
+  type: ClusterIP
+  clusterIP: None # Headless - returns pod IPs directly
+  selector:
+    app: rest-api
+    tier: backend
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+  publishNotReadyAddresses: false

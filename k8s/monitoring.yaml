@@ -1,0 +1,807 @@
+# ── Monitoring Stack for Image Converter Application ──────────────────────────
+# Kubernetes manifests for Prometheus, Grafana, and Alerting
+#
+# This file sets up:
+# 1. ServiceMonitor for Prometheus scraping
+# 2. PodMonitor for detailed pod metrics
+# 3. PrometheusRule for alerting
+# 4. Grafana Dashboard ConfigMaps
+# 5. ServiceAccount for monitoring access
+#
+# Prerequisites:
+# - Prometheus Operator installed (via Helm: kube-prometheus-stack)
+# - kubectl configured with cluster access
+# - Namespace 'monitoring' created
+#
+# Usage:
+#   kubectl apply -f k8s/monitoring.yaml -n monitoring
+#
+# ──────────────────────────────────────────────────────────────────────────────
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    app.kubernetes.io/name: monitoring
+    app.kubernetes.io/component: observability
+    app.kubernetes.io/part-of: scaleway-infra-lab
+
+---
+# ── ServiceAccount for Prometheus ─────────────────────────────────────────────
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-image-converter
+  namespace: monitoring
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: image-converter-monitor
+
+---
+# ── ClusterRole for Prometheus Scraping ───────────────────────────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prometheus-image-converter
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: image-converter-monitor
+rules:
+  - apiGroups: [""]
+    resources:
+      - nodes
+      - nodes/metrics
+      - services
+      - endpoints
+      - pods
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["extensions"]
+    resources:
+      - ingresses
+    verbs: ["get", "list", "watch"]
+  - nonResourceURLs: ["/metrics"]
+    verbs: ["get"]
+
+---
+# ── ClusterRoleBinding ─────────────────────────────────────────────────────────
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-image-converter
+  labels:
+    app.kubernetes.io/name: prometheus
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus-image-converter
+subjects:
+  - kind: ServiceAccount
+    name: prometheus-image-converter
+    namespace: monitoring
+
+---
+# ── ServiceMonitor for REST API ────────────────────────────────────────────────
+# Scrapes metrics from the rest-api deployment on Kapsule
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rest-api-monitor
+  namespace: onboarding
+  labels:
+    app.kubernetes.io/name: rest-api
+    app.kubernetes.io/component: monitor
+    release: prometheus  # Must match Prometheus helm release label
+spec:
+  selector:
+    matchLabels:
+      app: rest-api
+      tier: backend
+  namespaceSelector:
+    matchNames:
+      - onboarding
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+      honorLabels: true
+      scheme: http
+      metricRelabelings:
+        - sourceLabels: [__name__]
+          regex: 'go_.*'
+          action: drop
+        - sourceLabels: [__name__]
+          regex: 'python_.*'
+          action: keep
+
+---
+# ── ServiceMonitor for Image Converter (Serverless) ────────────────────────────
+# Note: Serverless Containers expose metrics via Scaleway infrastructure
+# This is a placeholder for custom metrics exported by rest-api
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: image-converter-monitor
+  namespace: onboarding
+  labels:
+    app.kubernetes.io/name: image-converter
+    app.kubernetes.io/component: monitor
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: image-converter
+  namespaceSelector:
+    matchNames:
+      - onboarding
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
+
+---
+# ── PodMonitor for Detailed Pod Metrics ────────────────────────────────────────
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: rest-api-pod-monitor
+  namespace: onboarding
+  labels:
+    app.kubernetes.io/name: rest-api
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: rest-api
+      tier: backend
+  podMetricsEndpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scheme: http
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_name]
+          targetLabel: pod
+        - sourceLabels: [__meta_kubernetes_namespace]
+          targetLabel: namespace
+
+---
+# ── PrometheusRule: Alerting Rules ─────────────────────────────────────────────
+# Comprehensive alerting rules for the image converter application
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: image-converter-alerts
+  namespace: onboarding
+  labels:
+    app.kubernetes.io/name: image-converter
+    app.kubernetes.io/component: alerting
+    release: prometheus
+spec:
+  groups:
+    # ── Availability Alerts ────────────────────────────────────────────────────
+    - name: image-converter-availability
+      interval: 30s
+      rules:
+        - alert: RESTAPIHighErrorRate
+          expr: |
+            sum(rate(http_requests_total{job="rest-api",status=~"5.."}[5m]))
+            / sum(rate(http_requests_total{job="rest-api"}[5m])) > 0.01
+          for: 5m
+          labels:
+            severity: critical
+            service: rest-api
+          annotations:
+            summary: "High error rate on REST API"
+            description: "Error rate is {{ $value | humanizePercentage }} on rest-api (threshold: 1%)"
+            runbook_url: "https://runbooks.example.com/rest-api-high-error-rate"
+
+        - alert: RESTAPIDown
+          expr: |
+            up{job="rest-api"} == 0
+          for: 2m
+          labels:
+            severity: critical
+            service: rest-api
+          annotations:
+            summary: "REST API is down"
+            description: "REST API pod {{ $labels.pod }} has been down for more than 2 minutes"
+            runbook_url: "https://runbooks.example.com/rest-api-down"
+
+        - alert: ServerlessHighErrorRate
+          expr: |
+            sum(rate(serverless_requests_total{status=~"5.."}[5m]))
+            / sum(rate(serverless_requests_total[5m])) > 0.05
+          for: 5m
+          labels:
+            severity: warning
+            service: image-converter
+          annotations:
+            summary: "High error rate on Serverless Container"
+            description: "Error rate is {{ $value | humanizePercentage }} on image-converter (threshold: 5%)"
+
+    # ── Performance Alerts ────────────────────────────────────────────────────
+    - name: image-converter-performance
+      interval: 30s
+      rules:
+        - alert: RESTAPIHighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(http_request_duration_seconds_bucket{job="rest-api"}[5m])) by (le)
+            ) > 2
+          for: 5m
+          labels:
+            severity: warning
+            service: rest-api
+          annotations:
+            summary: "High latency on REST API"
+            description: "p95 latency is {{ $value | humanize }}s (threshold: 2s)"
+
+        - alert: RESTAPIHighLatencyP99
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(http_request_duration_seconds_bucket{job="rest-api"}[5m])) by (le)
+            ) > 5
+          for: 5m
+          labels:
+            severity: critical
+            service: rest-api
+          annotations:
+            summary: "Very high p99 latency on REST API"
+            description: "p99 latency is {{ $value | humanize }}s (threshold: 5s)"
+
+        - alert: ImageConverterSlowConversion
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(conversion_duration_seconds_bucket[5m])) by (le)
+            ) > 3
+          for: 5m
+          labels:
+            severity: warning
+            service: image-converter
+          annotations:
+            summary: "Slow image conversion times"
+            description: "p95 conversion time is {{ $value | humanize }}s (threshold: 3s)"
+
+    # ── AI Service Alerts ─────────────────────────────────────────────────────
+    - name: ai-alt-generator-alerts
+      interval: 30s
+      rules:
+        - alert: AILowConfidence
+          expr: |
+            avg(ai_confidence_score[10m]) < 0.5
+          for: 10m
+          labels:
+            severity: warning
+            service: ai-alt-generator
+          annotations:
+            summary: "AI confidence score too low"
+            description: "Average AI confidence is {{ $value }} (threshold: 0.5)"
+
+        - alert: AIHighLatency
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(ai_request_duration_seconds_bucket[5m])) by (le)
+            ) > 5
+          for: 5m
+          labels:
+            severity: warning
+            service: ai-alt-generator
+          annotations:
+            summary: "High latency on AI Alt Generator"
+            description: "p95 AI processing time is {{ $value | humanize }}s (threshold: 5s)"
+
+        - alert: AIWCGANonCompliance
+          expr: |
+            avg(ai_wcag_compliance_score[1h]) < 0.9
+          for: 1h
+          labels:
+            severity: warning
+            service: ai-alt-generator
+          annotations:
+            summary: "WCAG compliance score below target"
+            description: "Average WCAG compliance is {{ $value | humanizePercentage }} (target: 90%)"
+
+    # ── Resource Alerts ───────────────────────────────────────────────────────
+    - name: image-converter-resources
+      interval: 30s
+      rules:
+        - alert: RESTAPIHighMemoryUsage
+          expr: |
+            container_memory_usage_bytes{container="rest-api"}
+            / container_spec_memory_limit_bytes{container="rest-api"} > 0.85
+          for: 5m
+          labels:
+            severity: warning
+            service: rest-api
+          annotations:
+            summary: "High memory usage on REST API"
+            description: "Memory usage is {{ $value | humanizePercentage }} of limit (threshold: 85%)"
+
+        - alert: RESTAPIHighCPUUsage
+          expr: |
+            rate(container_cpu_usage_seconds_total{container="rest-api"}[5m])
+            / container_spec_cpu_quota{container="rest-api"} > 0.85
+          for: 5m
+          labels:
+            severity: warning
+            service: rest-api
+          annotations:
+            summary: "High CPU usage on REST API"
+            description: "CPU usage is {{ $value | humanizePercentage }} of quota (threshold: 85%)"
+
+        - alert: PodRestartingLoop
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="onboarding"}[1h]) > 3
+          for: 5m
+          labels:
+            severity: warning
+            service: rest-api
+          annotations:
+            summary: "Pod restarting frequently"
+            description: "Pod {{ $labels.pod }} has restarted {{ $value }} times in the last hour"
+
+    # ── Business Metrics Alerts ───────────────────────────────────────────────
+    - name: image-converter-business
+      interval: 1m
+      rules:
+        - alert: LowUploadRate
+          expr: |
+            sum(rate(uploads_total[1h])) < 0.1
+          for: 2h
+          labels:
+            severity: info
+            service: rest-api
+          annotations:
+            summary: "Very low upload rate"
+            description: "Upload rate is {{ $value }}/s, which is unusually low"
+
+        - alert: HighCompressionRatio
+          expr: |
+            avg(image_compression_ratio) > 80
+          for: 1h
+          labels:
+            severity: info
+            service: image-converter
+          annotations:
+            summary: "High compression ratio detected"
+            description: "Average compression ratio is {{ $value }}%, consider adjusting quality settings"
+
+        - alert: ServerlessColdStartSpike
+          expr: |
+            sum(increase(serverless_cold_starts_total[5m])) > 10
+          for: 5m
+          labels:
+            severity: info
+            service: image-converter
+          annotations:
+            summary: "High number of cold starts"
+            description: "{{ $value }} cold starts in the last 5 minutes"
+
+    # ── Cost Alerts ───────────────────────────────────────────────────────────
+    - name: image-converter-cost
+      interval: 5m
+      rules:
+        - alert: ServerlessCostThreshold
+          expr: |
+            sum(increase(serverless_invocation_cost_total[1d])) > 10
+          for: 1h
+          labels:
+            severity: warning
+            service: image-converter
+          annotations:
+            summary: "Daily serverless cost threshold exceeded"
+            description: "Daily serverless cost is ${{ $value }} (threshold: $10)"
+
+        - alert: QwenAPICostThreshold
+          expr: |
+            sum(increase(qwen_api_cost_total[1d])) > 20
+          for: 1h
+          labels:
+            severity: warning
+            service: ai-alt-generator
+          annotations:
+            summary: "Daily Qwen API cost threshold exceeded"
+            description: "Daily Qwen API cost is ${{ $value }} (threshold: $20)"
+
+---
+# ── Grafana Dashboard ConfigMap: Overview ─────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-image-converter-overview
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: image-converter
+data:
+  image-converter-overview.json: |
+    {
+      "dashboard": {
+        "uid": "image-converter-overview",
+        "title": "Image Converter - Overview",
+        "tags": ["image-converter", "overview"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "type": "stat",
+            "title": "Total Requests (24h)",
+            "targets": [
+              {
+                "expr": "sum(increase(http_requests_total{job=\"rest-api\"}[24h]))",
+                "legendFormat": "Requests"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none",
+                "decimals": 0
+              }
+            },
+            "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "type": "stat",
+            "title": "Error Rate",
+            "targets": [
+              {
+                "expr": "sum(rate(http_requests_total{job=\"rest-api\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"rest-api\"}[5m])) * 100",
+                "legendFormat": "Error %"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"value": null, "color": "green"},
+                    {"value": 1, "color": "yellow"},
+                    {"value": 5, "color": "red"}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0}
+          },
+          {
+            "id": 3,
+            "type": "stat",
+            "title": "p95 Latency",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"rest-api\"}[5m])) by (le))",
+                "legendFormat": "p95"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "s",
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"value": null, "color": "green"},
+                    {"value": 1, "color": "yellow"},
+                    {"value": 2, "color": "red"}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0}
+          },
+          {
+            "id": 4,
+            "type": "stat",
+            "title": "Active Pods",
+            "targets": [
+              {
+                "expr": "count(kube_pod_status_phase{namespace=\"onboarding\",phase=\"Running\"})",
+                "legendFormat": "Pods"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none"
+              }
+            },
+            "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0}
+          },
+          {
+            "id": 5,
+            "type": "timeseries",
+            "title": "Request Rate",
+            "targets": [
+              {
+                "expr": "sum(rate(http_requests_total{job=\"rest-api\"}[5m])) by (status)",
+                "legendFormat": "{{status}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "reqps"
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
+          },
+          {
+            "id": 6,
+            "type": "timeseries",
+            "title": "Latency Distribution",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{job=\"rest-api\"}[5m])) by (le))",
+                "legendFormat": "p50"
+              },
+              {
+                "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"rest-api\"}[5m])) by (le))",
+                "legendFormat": "p95"
+              },
+              {
+                "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"rest-api\"}[5m])) by (le))",
+                "legendFormat": "p99"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "s"
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4}
+          },
+          {
+            "id": 7,
+            "type": "timeseries",
+            "title": "Image Conversion by Format",
+            "targets": [
+              {
+                "expr": "sum(increase(image_conversions_total[1h])) by (format)",
+                "legendFormat": "{{format}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "none"
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12}
+          },
+          {
+            "id": 8,
+            "type": "timeseries",
+            "title": "Average Compression Ratio",
+            "targets": [
+              {
+                "expr": "avg(image_compression_ratio) by (format)",
+                "legendFormat": "{{format}}"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent"
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12}
+          }
+        ],
+        "schemaVersion": 38,
+        "refresh": "30s"
+      }
+    }
+
+---
+# ── Grafana Dashboard ConfigMap: AI Metrics ────────────────────────────────────
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-ai-metrics
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: ai-alt-generator
+data:
+  ai-alt-generator-metrics.json: |
+    {
+      "dashboard": {
+        "uid": "ai-alt-generator-metrics",
+        "title": "AI Alt Generator - Metrics",
+        "tags": ["ai", "alt-generator", "qwen"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "type": "stat",
+            "title": "AI Requests (24h)",
+            "targets": [
+              {
+                "expr": "sum(increase(ai_requests_total[24h]))",
+                "legendFormat": "Requests"
+              }
+            ],
+            "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+          },
+          {
+            "id": 2,
+            "type": "stat",
+            "title": "Avg Confidence Score",
+            "targets": [
+              {
+                "expr": "avg(ai_confidence_score)",
+                "legendFormat": "Confidence"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percentunit",
+                "min": 0,
+                "max": 1,
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"value": null, "color": "red"},
+                    {"value": 0.5, "color": "yellow"},
+                    {"value": 0.7, "color": "green"}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0}
+          },
+          {
+            "id": 3,
+            "type": "stat",
+            "title": "WCAG Compliance Rate",
+            "targets": [
+              {
+                "expr": "avg(ai_wcag_compliance_score) * 100",
+                "legendFormat": "Compliance %"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percent",
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"value": null, "color": "red"},
+                    {"value": 85, "color": "yellow"},
+                    {"value": 90, "color": "green"}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0}
+          },
+          {
+            "id": 4,
+            "type": "stat",
+            "title": "Avg Processing Time",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, sum(rate(ai_request_duration_seconds_bucket[5m])) by (le))",
+                "legendFormat": "p95"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "s",
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {"value": null, "color": "green"},
+                    {"value": 3, "color": "yellow"},
+                    {"value": 5, "color": "red"}
+                  ]
+                }
+              }
+            },
+            "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0}
+          },
+          {
+            "id": 5,
+            "type": "timeseries",
+            "title": "AI Request Rate",
+            "targets": [
+              {
+                "expr": "sum(rate(ai_requests_total[5m]))",
+                "legendFormat": "Requests/sec"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
+          },
+          {
+            "id": 6,
+            "type": "histogram",
+            "title": "Confidence Score Distribution",
+            "targets": [
+              {
+                "expr": "ai_confidence_score",
+                "legendFormat": "Confidence"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "percentunit",
+                "min": 0,
+                "max": 1
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4}
+          },
+          {
+            "id": 7,
+            "type": "piechart",
+            "title": "Image Types Distribution",
+            "targets": [
+              {
+                "expr": "sum(ai_images_by_type) by (type)",
+                "legendFormat": "{{type}}"
+              }
+            ],
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12}
+          },
+          {
+            "id": 8,
+            "type": "timeseries",
+            "title": "Qwen API Cost (USD)",
+            "targets": [
+              {
+                "expr": "sum(increase(qwen_api_cost_total[1d]))",
+                "legendFormat": "Daily Cost"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "unit": "currencyUSD"
+              }
+            },
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12}
+          }
+        ],
+        "schemaVersion": 38,
+        "refresh": "30s"
+      }
+    }
+
+---
+# ── Pod Disruption Budget for High Availability ────────────────────────────────
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rest-api-pdb
+  namespace: onboarding
+  labels:
+    app.kubernetes.io/name: rest-api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: rest-api
+      tier: backend
+
+---
+# ── VerticalPodAutoscaler (Optional - VPA Operator Required) ───────────────────
+# apiVersion: autoscaling.k8s.io/v1
+# kind: VerticalPodAutoscaler
+# metadata:
+#   name: rest-api-vpa
+#   namespace: onboarding
+# spec:
+#   targetRef:
+#     apiVersion: apps/v1
+#     kind: Deployment
+#     name: rest-api
+#   updatePolicy:
+#     updateMode: Auto
+#   resourcePolicy:
+#     containerPolicies:
+#       - containerName: rest-api
+#         minAllowed:
+#           cpu: 100m
+#           memory: 256Mi
+#         maxAllowed:
+#           cpu: 1000m
+#           memory: 1Gi
