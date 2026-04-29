@@ -1,0 +1,903 @@
+openapi: 3.0.3
+info:
+  title: Image Converter API
+  description: |
+    Cloud-native image conversion service with AI-powered alt-text generation.
+
+    ## Features
+
+    - **Multi-format conversion**: PNG → WebP, AVIF, JPEG, PNG
+    - **Quality control**: Configurable quality settings (1-100)
+    - **AI alt-text generation**: WCAG-compliant accessibility metadata
+    - **HTML/React output**: Ready-to-use accessible code components
+
+    ## Architecture
+
+    - **REST API**: FastAPI on Kubernetes (Kapsule)
+    - **Image Converter**: Serverless Container (scale-to-zero)
+    - **AI Generator**: Serverless Container with Qwen Vision API
+    - **Storage**: Scaleway Object Storage (S3-compatible)
+    - **Database**: Scaleway Managed PostgreSQL
+
+    ## Authentication
+
+    Service-to-service authentication uses bearer tokens via `X-Auth-Token` header.
+
+    ```bash
+    curl -H "X-Auth-Token: your-token" https://api.example.com/upload
+    ```
+
+    ## Rate Limiting
+
+    - Default: 60 requests per minute per IP
+    - Burst: 100 requests
+    - Contact support for quota increases
+
+  version: 3.0.0
+  contact:
+    name: API Support
+    email: api-support@example.com
+    url: https://docs.example.com
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: https://api.image-converter.example.com
+    description: Production server
+  - url: https://staging.api.image-converter.example.com
+    description: Staging server
+  - url: http://localhost:8080
+    description: Local development
+
+tags:
+  - name: Health
+    description: Health check and service status endpoints
+  - name: Upload
+    description: Image upload and conversion endpoints
+  - name: Images
+    description: Image retrieval and listing endpoints
+  - name: Formats
+    description: Supported format information
+  - name: Converter
+    description: Direct image converter service (Serverless)
+  - name: AI Alt Generator
+    description: AI-powered alt-text generation (Serverless)
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health Check
+      description: Check API health status and connected services
+      operationId: getHealth
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: Service Unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /formats:
+    get:
+      tags:
+        - Formats
+      summary: List Supported Formats
+      description: Get list of supported image formats and their options
+      operationId: getFormats
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormatsResponse'
+
+  /upload:
+    post:
+      tags:
+        - Upload
+      summary: Upload and Convert Image
+      description: |
+        Upload a PNG image and convert it to the specified format.
+
+        ## Features
+
+        - **Multi-format**: WebP, AVIF, JPEG, PNG
+        - **Quality control**: 1-100 (default: 80)
+        - **AI alt-text**: Optional WCAG-compliant generation
+        - **Automatic optimization**: Best compression for chosen format
+
+        ## Response
+
+        Returns image metadata including:
+        - Image ID and URL
+        - Conversion metrics (original size, converted size, ratio)
+        - Optional AI-generated alt-text
+      operationId: uploadImage
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UploadRequest'
+            encoding:
+              file:
+                contentType: image/png
+      responses:
+        '200':
+          description: Image uploaded and converted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadResponse'
+        '400':
+          description: Invalid request (not PNG, unsupported format)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          description: File too large (>10MB)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Conversion failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+      x-codeSamples:
+        - lang: curl
+          label: Basic Upload
+          source: |
+            curl -X POST https://api.example.com/upload \
+              -F "file=@image.png" \
+              -F "format=webp" \
+              -F "quality=80"
+        - lang: curl
+          label: Upload with AI Alt-Text
+          source: |
+            curl -X POST https://api.example.com/upload \
+              -F "file=@image.png" \
+              -F "format=webp" \
+              -F "quality=80" \
+              -F "generate_alt=true"
+        - lang: javascript
+          label: Node.js Example
+          source: |
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('format', 'webp');
+            formData.append('quality', 80);
+            formData.append('generate_alt', true);
+
+            const response = await fetch('https://api.example.com/upload', {
+              method: 'POST',
+              body: formData
+            });
+            const result = await response.json();
+
+  /images:
+    get:
+      tags:
+        - Images
+      summary: List Images
+      description: Paginated list of all uploaded images
+      operationId: listImages
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/OffsetParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageListResponse'
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /images/{image_id}:
+    get:
+      tags:
+        - Images
+      summary: Get Image Details
+      description: Get detailed information about a specific image including alt-text
+      operationId: getImage
+      parameters:
+        - $ref: '#/components/parameters/ImageIdParam'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageDetailResponse'
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /converter/convert:
+    post:
+      tags:
+        - Converter
+      summary: Convert Image
+      description: |
+        Convert an image to a different format.
+
+        ## Supported Formats
+
+        | Format | MIME Type | Best Use Case |
+        |--------|-----------|---------------|
+        | WebP | image/webp | General web use |
+        | AVIF | image/avif | Maximum compression |
+        | JPEG | image/jpeg | Maximum compatibility |
+        | PNG | image/png | Lossless, transparency |
+      operationId: convertImage
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConvertRequest'
+      responses:
+        '200':
+          description: Converted image
+          content:
+            image/webp:
+              schema:
+                type: string
+                format: binary
+            image/avif:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+          headers:
+            X-Original-Size:
+              $ref: '#/components/headers/OriginalSize'
+            X-Converted-Size:
+              $ref: '#/components/headers/ConvertedSize'
+            X-Compression-Ratio:
+              $ref: '#/components/headers/CompressionRatio'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Conversion error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /converter/optimize:
+    post:
+      tags:
+        - Converter
+      summary: Optimize Image
+      description: |
+        Optimize an image without changing format.
+        Automatically selects best format based on input.
+      operationId: optimizeImage
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file to optimize
+      responses:
+        '200':
+          description: Optimized image
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          headers:
+            X-Original-Format:
+              schema:
+                type: string
+            X-Optimized-Format:
+              schema:
+                type: string
+            X-Original-Size:
+              $ref: '#/components/headers/OriginalSize'
+            X-Optimized-Size:
+              $ref: '#/components/headers/ConvertedSize'
+            X-Savings:
+              schema:
+                type: string
+                description: Compression savings percentage
+        '400':
+          description: Invalid request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Optimization error
+
+  /ai/generate-alt:
+    post:
+      tags:
+        - AI Alt Generator
+      summary: Generate Alt-Text
+      description: |
+        Generate WCAG-compliant alt-text and accessibility metadata for an image.
+
+        ## Powered by Qwen Vision API
+
+        Uses state-of-the-art computer vision to analyze images and generate:
+        - Concise alt-text (WCAG compliant, <125 chars)
+        - Detailed descriptions
+        - Accessible HTML tags
+        - React components with TypeScript
+
+        ## WCAG 2.1 Compliance
+
+        Generated alt-text follows WCAG 2.1 Level AA guidelines:
+        - Descriptive and meaningful
+        - No redundant phrases ("image of", "picture of")
+        - Appropriate length for context
+        - Marks decorative images appropriately
+      operationId: generateAltText
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file to analyze
+                include_react:
+                  type: boolean
+                  default: true
+                  description: Include React component code
+                include_html:
+                  type: boolean
+                  default: true
+                  description: Include HTML img tag
+      responses:
+        '200':
+          description: Alt-text generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AltTextResponse'
+        '400':
+          description: Invalid image or format
+        '401':
+          description: Unauthorized
+        '500':
+          description: AI generation failed
+        '503':
+          description: AI service unavailable
+
+  /ai/analyze:
+    post:
+      tags:
+        - AI Alt Generator
+      summary: Full Image Analysis
+      description: |
+        Comprehensive image analysis including:
+        - Accessibility metadata
+        - Objects detected
+        - Scene description
+        - Dominant colors
+        - Text content (OCR)
+        - Suggested tags
+      operationId: analyzeImage
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                custom_prompt:
+                  type: string
+                  description: Custom analysis prompt
+      responses:
+        '200':
+          description: Analysis results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalysisResponse'
+        '400':
+          description: Invalid request
+        '401':
+          description: Unauthorized
+        '500':
+          description: Analysis failed
+
+  /ai/config:
+    get:
+      tags:
+        - AI Alt Generator
+      summary: Get AI Service Config
+      description: Get current AI service configuration (non-sensitive)
+      operationId: getAIConfig
+      responses:
+        '200':
+          description: Configuration details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AIConfigResponse'
+
+components:
+  parameters:
+    LimitParam:
+      name: limit
+      in: query
+      description: Maximum number of images to return
+      schema:
+        type: integer
+        default: 100
+        minimum: 1
+        maximum: 1000
+    OffsetParam:
+      name: offset
+      in: query
+      description: Number of images to skip (for pagination)
+      schema:
+        type: integer
+        default: 0
+        minimum: 0
+    ImageIdParam:
+      name: image_id
+      in: path
+      required: true
+      description: Unique image identifier (UUID)
+      schema:
+        type: string
+        format: uuid
+        example: "550e8400-e29b-41d4-a716-446655440000"
+    FormatParam:
+      name: format
+      in: query
+      description: Target image format
+      schema:
+        type: string
+        enum: [webp, avif, jpeg, png]
+        default: webp
+    QualityParam:
+      name: quality
+      in: query
+      description: Image quality (1-100)
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 80
+
+  headers:
+    OriginalSize:
+      description: Original image size in bytes
+      schema:
+        type: integer
+    ConvertedSize:
+      description: Converted image size in bytes
+      schema:
+        type: integer
+    CompressionRatio:
+      description: Compression ratio as percentage
+      schema:
+        type: string
+        example: "45.2%"
+
+  schemas:
+    # Health Check
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, error]
+          example: ok
+        services:
+          type: object
+          properties:
+            converter:
+              type: string
+              description: Converter service URL
+            ai_generator:
+              type: string
+              description: AI generator service URL
+            database:
+              type: string
+            storage:
+              type: string
+              description: S3 bucket name
+        version:
+          type: string
+          example: "3.0.0"
+        timestamp:
+          type: string
+          format: date-time
+
+    # Formats
+    FormatsResponse:
+      type: object
+      required:
+        - supported_formats
+      properties:
+        supported_formats:
+          type: array
+          items:
+            type: string
+            enum: [webp, avif, jpeg, png]
+          example: [webp, avif, jpeg, png]
+        default_format:
+          type: string
+          example: webp
+        quality_range:
+          type: object
+          properties:
+            min:
+              type: integer
+              example: 1
+            max:
+              type: integer
+              example: 100
+            default:
+              type: integer
+              example: 80
+
+    # Upload
+    UploadRequest:
+      type: object
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+          description: PNG image file to upload and convert
+        format:
+          type: string
+          enum: [webp, avif, jpeg, png]
+          default: webp
+          description: Target format for conversion
+        quality:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 80
+          description: Quality level (1-100, higher = better quality)
+        generate_alt:
+          type: boolean
+          default: false
+          description: Generate AI alt-text for accessibility
+
+    UploadResponse:
+      type: object
+      required:
+        - id
+        - url
+        - format
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique image identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        url:
+          type: string
+          format: uri
+          description: Public URL of the converted image
+          example: "https://bucket.s3.fr-par.scw.cloud/550e8400-e29b-41d4-a716-446655440000.webp"
+        format:
+          type: string
+          enum: [webp, avif, jpeg, png]
+        original_size:
+          type: integer
+          description: Original file size in bytes
+          example: 125000
+        converted_size:
+          type: integer
+          description: Converted file size in bytes
+          example: 52500
+        compression_ratio:
+          type: string
+          description: Compression ratio as percentage
+          example: "42.0%"
+        alt_text:
+          $ref: '#/components/schemas/AltTextRecord'
+          description: AI-generated alt-text (if generate_alt=true)
+        created_at:
+          type: string
+          format: date-time
+
+    # Images
+    ImageListResponse:
+      type: object
+      required:
+        - images
+        - limit
+        - offset
+        - total
+      properties:
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImageSummary'
+        limit:
+          type: integer
+        offset:
+          type: integer
+        total:
+          type: integer
+          description: Total number of images available
+
+    ImageSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+        format:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        has_alt_text:
+          type: boolean
+
+    ImageDetailResponse:
+      type: object
+      required:
+        - id
+        - url
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+        format:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        alt_text:
+          $ref: '#/components/schemas/AltTextRecord'
+
+    AltTextRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        alt_text:
+          type: string
+          maxLength: 255
+          description: WCAG-compliant alt-text
+          example: "A blue button with white text saying 'Submit'"
+        description:
+          type: string
+          description: Detailed description (2-4 sentences)
+        html_tag:
+          type: string
+          description: Complete HTML img tag
+        image_type:
+          type: string
+          enum: [photo, illustration, chart, icon, screenshot, other]
+        confidence:
+          type: string
+          format: float
+          minimum: 0
+          maximum: 1
+          description: AI confidence score
+
+    AltTextResponse:
+      type: object
+      required:
+        - alt_text
+      properties:
+        alt_text:
+          type: string
+          description: Concise alt-text (max 125 chars WCAG recommended)
+          example: "A blue button with white text saying 'Submit'"
+        description:
+          type: string
+          description: Detailed description
+        html:
+          type: string
+          description: Complete accessible HTML img tag
+          example: "<img src='image.webp' alt='A blue button...' loading='lazy' class='accessible-image' />"
+        react:
+          type: string
+          description: React component code (if include_react=true)
+        image_type:
+          type: string
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        decorative:
+          type: boolean
+          description: Whether image is decorative (empty alt acceptable)
+        original_size:
+          type: integer
+        image_dimensions:
+          type: string
+          example: "1920x1080"
+        model:
+          type: string
+          example: "qwen-vl-max"
+
+    AnalysisResponse:
+      type: object
+      properties:
+        alt_text:
+          type: string
+        description:
+          type: string
+        objects:
+          type: array
+          items:
+            type: string
+        scene:
+          type: string
+        colors:
+          type: array
+          items:
+            type: string
+        ocr_text:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        image_type:
+          type: string
+        confidence:
+          type: number
+
+    AIConfigResponse:
+      type: object
+      properties:
+        model:
+          type: string
+        base_url:
+          type: string
+        max_image_size_mb:
+          type: integer
+        max_alt_text_length:
+          type: integer
+        auth_enabled:
+          type: boolean
+        configured:
+          type: boolean
+
+    # Converter
+    ConvertRequest:
+      type: object
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+        format:
+          type: string
+          enum: [webp, avif, jpeg, png]
+          default: webp
+        quality:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 80
+
+    # Errors
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error type
+          example: "ValidationError"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "File must be a PNG image"
+        details:
+          type: object
+          description: Additional error details (optional)
+        code:
+          type: integer
+          description: Error code
+          example: 400
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Auth-Token
+      description: API key for service-to-service authentication
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for user authentication
+
+security:
+  - ApiKeyAuth: []
+
+x-tagGroups:
+  - name: Core API
+    tags:
+      - Health
+      - Upload
+      - Images
+      - Formats
+  - name: Serverless Services
+    tags:
+      - Converter
+      - AI Alt Generator
