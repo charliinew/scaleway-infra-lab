@@ -14,7 +14,7 @@ import logging
 import os
 from typing import Optional
 
-import pillow_avif  # AVIF support via pillow
+import pillow_avif  # noqa: F401 — side-effect import: registers AVIF codec in Pillow
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, Response
 from PIL import Image
