@@ -22,7 +22,7 @@
 3. **VERIFY YOU'RE IN THE RIGHT PROJECT**
    ```bash
    scw config get project_id
-   # Should show: 7f7e1a40-fa1f-400d-831d-5d914f377853
+   # Should show: <YOUR_PROJECT_ID>
    ```
 
 4. **CHECK WHAT WILL BE DESTROYED**

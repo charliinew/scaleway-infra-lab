@@ -16,7 +16,7 @@ The Scaleway Image Converter platform has been successfully deployed with core f
 |-----------|--------|---------|
 | **Kubernetes Cluster** | ✅ Ready | 3 nodes (2 default + 1 serverless pool) |
 | **REST API (rest-api)** | ✅ Running | 2/2 pods healthy, responding to requests |
-| **Load Balancer** | ✅ Configured | IP: `51.159.113.54`, port 80 |
+| **Load Balancer** | ✅ Configured | IP: `<LB_IP>`, port 80 |
 | **PostgreSQL Database** | ✅ Running | HA instance, connected |
 | **S3 Object Storage** | ✅ Ready | Bucket: `onboarding-images-prod` |
 | **Image Converter Container** | ✅ **READY** | Serverless Container operational |
@@ -32,13 +32,13 @@ The application is publicly accessible via the Scaleway LoadBalancer:
 
 ```bash
 # Health check - WORKING
-curl http://51.159.113.54/health
+curl http://<LB_IP>/health
 
 # Response:
 {
   "status": "ok",
   "services": {
-    "converter": "https://onboardingconverters3277776b-image-converter.functions.fnc.fr-par.scw.cloud",
+    "converter": "https://<IMAGE_CONVERTER_DOMAIN>",
     "ai_generator": "not configured",
     "database": "connected",
     "storage": "onboarding-images-prod"
@@ -47,14 +47,14 @@ curl http://51.159.113.54/health
 ```
 
 ### 2. Kubernetes Infrastructure
-- **Cluster ID:** `00e1cd7d-7835-43d2-828a-a5e37471a1da`
+- **Cluster ID:** `<CLUSTER_ID>`
 - **Version:** 1.34.6
 - **Nodes:** 3 (2× PRO2-XS default pool, 1× DEV1-M serverless pool)
 - **Namespace:** `onboarding`
 - **Deployment:** `rest-api` with 2 replicas
 
 ### 3. Database Connectivity
-- **Instance ID:** `5a42df26-7aaa-4b29-9b71-d9dea9713c43`
+- **Instance ID:** `<DATABASE_ID>`
 - **Engine:** PostgreSQL 15
 - **Database:** `onboarding`
 - **User:** `onboarding`
@@ -67,8 +67,8 @@ curl http://51.159.113.54/health
 - **Status:** Ready for image storage
 
 ### 5. Load Balancer Configuration
-- **LB ID:** `e9968389-a3d8-479a-890c-3688d3120f54`
-- **Public IP:** `51.159.113.54`
+- **LB ID:** `<LB_ID>`
+- **Public IP:** `<LB_IP>`
 - **Frontend:** Port 80 (HTTP)
 - **Backend:** NodePort 31974 (TCP → HTTP)
 - **Health Check:** `/health` endpoint every 3s
@@ -83,11 +83,11 @@ curl http://51.159.113.54/health
 **Status:** **Operational and Tested**
 
 **Container Details:**
-- **Container ID:** `00b17efd-ed16-44e7-a117-716f9889a669`
+- **Container ID:** `<CONTAINER_ID>`
 - **Name:** `image-converter`
-- **Namespace ID:** `3277776b-27b8-4376-a4d9-5651c07daeb5`
+- **Namespace ID:** `<CONTAINER_NAMESPACE_ID>`
 - **Registry Image:** `rg.fr-par.scw.cloud/onboarding/image-converter:latest`
-- **Domain:** `onboardingconverters3277776b-image-converter.functions.fnc.fr-par.scw.cloud`
+- **Domain:** `<IMAGE_CONVERTER_DOMAIN>`
 - **Port:** 8080
 - **Protocol:** HTTP/1
 - **Scaling:** 0-10 instances (auto-scale to zero)
@@ -95,7 +95,7 @@ curl http://51.159.113.54/health
 **Test Results:**
 ```bash
 # Full upload test - SUCCESS ✅
-curl -X POST http://51.159.113.54/upload -F "file=@logo.png"
+curl -X POST http://<LB_IP>/upload -F "file=@logo.png"
 
 # Response:
 {
@@ -115,9 +115,9 @@ curl -X POST http://51.159.113.54/upload -F "file=@logo.png"
 **Status:** ⚠️ Requires Configuration
 
 **Container Details:**
-- **Container ID:** `09114f0f-8108-4313-9e12-696aaf9a06b1`
+- **Container ID:** `<AI_CONTAINER_ID>`
 - **Name:** `ai-alt-generator`
-- **Domain:** `onboardingconverters3277776b-ai-alt-generator.functions.fnc.fr-par.scw.cloud`
+- **Domain:** `<AI_GENERATOR_DOMAIN>`
 - **Model:** Qwen-VL-Max
 
 **Issue:** Container showing deployment errors. May require:
@@ -172,9 +172,9 @@ args:
       name: onboarding-secrets
       key: S3_SECRET_KEY
 - name: ONBOARDING_PROJECT_ID
-  value: "7f7e1a40-fa1f-400d-831d-5d914f377853"
+  value: "<PROJECT_ID>"
 - name: ONBOARDING_IMAGE_PROCESSOR_URL
-  value: "https://onboardingconverters3277776b-image-converter.functions.fnc.fr-par.scw.cloud"
+  value: "https://<IMAGE_CONVERTER_DOMAIN>"
 ```
 
 ### 3. Load Balancer Manual Configuration
@@ -186,7 +186,7 @@ args:
 ```bash
 # Create backend with HTTP health checks
 scw lb backend create \
-  lb-id=e9968389-a3d8-479a-890c-3688d3120f54 \
+  lb-id=<LB_ID> \
   name=rest-api-backend \
   forward-protocol=http \
   forward-port=31974 \
@@ -195,13 +195,13 @@ scw lb backend create \
 # Add Kubernetes nodes as backend servers
 scw lb backend set-servers \
   backend-id=<backend-id> \
-  server-ip.0=51.158.97.164 \
-  server-ip.1=51.158.114.40 \
-  server-ip.2=163.172.142.12
+  server-ip.0=<NODE_IP_1> \
+  server-ip.1=<NODE_IP_2> \
+  server-ip.2=<NODE_IP_3>
 
 # Create frontend on port 80
 scw lb frontend create \
-  lb-id=e9968389-a3d8-479a-890c-3688d3120f54 \
+  lb-id=<LB_ID> \
   name=rest-api-frontend \
   inbound-port=80 \
   backend-id=<backend-id>
@@ -227,7 +227,7 @@ curl -X POST "https://api.scaleway.com/lb/v1/regions/fr-par/routes" \
 **Solution:** Added inbound rule for NodePort:
 ```bash
 scw instance security-group create-rule \
-  security-group-id=60d5a824-1100-42f6-a329-3718628b9573 \
+  security-group-id=<SECURITY_GROUP_ID> \
   direction=inbound \
   protocol=TCP \
   action=accept \
@@ -257,17 +257,17 @@ scw instance security-group create-rule \
 
 | Resource Type | ID | Name | Status |
 |---------------|-----|------|--------|
-| **Kapsule Cluster** | `00e1cd7d-7835-43d2-828a-a5e37471a1da` | onboarding-kapsule | Ready |
-| **Default Pool** | `3ce77204-b94f-4e02-922f-8bb253e707a5` | default-pool | Ready (2 nodes) |
-| **Serverless Pool** | `f1a001e1-9e4f-49ea-b87d-1ed51fdf6711` | serverless-pool | Ready (1 node) |
-| **Load Balancer** | `e9968389-a3d8-479a-890c-3688d3120f54` | onboarding-lb | Ready |
-| **LB IP** | `5c2f6360-b884-48da-91f3-b7919697ca27` | - | 51.159.113.54 |
-| **PostgreSQL** | `5a42df26-7aaa-4b29-9b71-d9dea9713c43` | onboarding-db | Ready |
+| **Kapsule Cluster** | `<CLUSTER_ID>` | onboarding-kapsule | Ready |
+| **Default Pool** | `<DEFAULT_POOL_ID>` | default-pool | Ready (2 nodes) |
+| **Serverless Pool** | `<SERVERLESS_POOL_ID>` | serverless-pool | Ready (1 node) |
+| **Load Balancer** | `<LB_ID>` | onboarding-lb | Ready |
+| **LB IP** | `<LB_IP_RESOURCE_ID>` | - | <LB_IP> |
+| **PostgreSQL** | `<DATABASE_ID>` | onboarding-db | Ready |
 | **S3 Bucket** | - | onboarding-images-prod | Ready |
-| **Registry Namespace** | `5ec3ba64-a931-4402-b250-8d180faa8dd2` | onboarding | Ready |
-| **Container Namespace** | `3277776b-27b8-4376-a4d9-5651c07daeb5` | onboarding-converters | Ready |
-| **Image Converter** | `c811e966-ec83-4feb-a062-2c343c3745a9` | image-converter | Pending |
-| **AI Alt-Generator** | `dacf6422-e47e-4a68-9615-62b13795bd5e` | ai-alt-generator | Ready |
+| **Registry Namespace** | `<REGISTRY_NAMESPACE_ID>` | onboarding | Ready |
+| **Container Namespace** | `<CONTAINER_NAMESPACE_ID>` | onboarding-converters | Ready |
+| **Image Converter** | `<IMAGE_CONVERTER_ID>` | image-converter | Pending |
+| **AI Alt-Generator** | `<AI_ALT_GENERATOR_ID>` | ai-alt-generator | Ready |
 
 ### Docker Images
 
@@ -309,16 +309,16 @@ ServiceAccount:
 
 ```bash
 # Health Check
-curl http://51.159.113.54/health
+curl http://<LB_IP>/health
 
 # Upload Image (once converter is ready)
-curl -F "file=@logo.png" http://51.159.113.54/upload
+curl -F "file=@logo.png" http://<LB_IP>/upload
 
 # Upload with options
 curl -F "file=@logo.png" \
      -F "format=webp" \
      -F "quality=80" \
-     http://51.159.113.54/upload
+     http://<LB_IP>/upload
 ```
 
 ### Kubernetes Access
@@ -326,7 +326,7 @@ curl -F "file=@logo.png" \
 ```bash
 # Export kubeconfig
 export KUBECONFIG="/tmp/kubeconfig-onboarding.yaml"
-scw k8s cluster get 00e1cd7d-7835-43d2-828a-a5e37471a1da > $KUBECONFIG
+scw k8s cluster get <CLUSTER_ID> > $KUBECONFIG
 
 # Check cluster status
 kubectl get nodes
@@ -344,13 +344,13 @@ kubectl scale deployment rest-api -n onboarding --replicas=3
 
 ```bash
 # Check container status
-scw container container get c811e966-ec83-4feb-a062-2c343c3745a9
+scw container container get <IMAGE_CONVERTER_ID>
 
 # Check Load Balancer
-scw lb lb get e9968389-a3d8-479a-890c-3688d3120f54
+scw lb lb get <LB_ID>
 
 # Check database
-scw rdb instance get 5a42df26-7aaa-4b29-9b71-d9dea9713c43
+scw rdb instance get <DATABASE_ID>
 ```
 
 ---
@@ -369,7 +369,7 @@ scw rdb instance get 5a42df26-7aaa-4b29-9b71-d9dea9713c43
 **Resolution:**
 ```bash
 # Check security group rules
-scw instance security-group get 60d5a824-1100-42f6-a329-3718628b9573
+scw instance security-group get <SECURITY_GROUP_ID>
 
 # Verify pods are running
 kubectl get pods -n onboarding
@@ -394,10 +394,10 @@ kubectl run test --rm -it --image=curlimages/curl --restart=Never \
 **Resolution:**
 ```bash
 # Check container status
-scw container container get c811e966-ec83-4feb-a062-2c343c3745a9
+scw container container get <IMAGE_CONVERTER_ID>
 
 # Test converter directly
-curl -X POST "https://onboardingconverters3277776b-image-converter.functions.fnc.fr-par.scw.cloud/convert" \
+curl -X POST "https://<IMAGE_CONVERTER_DOMAIN>/convert" \
   --data-binary "@logo.png" -o test.jpg
 
 # Check rest-api logs for converter errors
@@ -435,13 +435,13 @@ kubectl exec <pod-name> -n onboarding -- env | grep ONBOARDING
 ### Immediate (Priority: Critical)
 
 1. **Wait for Image Converter Container**
-   - Monitor status: `scw container container get c811e966-ec83-4feb-a062-2c343c3745a9`
+   - Monitor status: `scw container container get <IMAGE_CONVERTER_ID>`
    - Expected time: 5-15 minutes from deployment
    - Once ready, test: `curl -X POST "https://<domain>/convert" --data-binary "@logo.png"`
 
 2. **Test Full Upload Flow**
    ```bash
-   curl -F "file=@logo.png" http://51.159.113.54/upload
+   curl -F "file=@logo.png" http://<LB_IP>/upload
    ```
    - Should return JSON with image ID and URL
    - Verify image appears in S3 bucket

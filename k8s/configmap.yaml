@@ -10,7 +10,7 @@ metadata:
 data:
   # Scaleway Project (non-sensitive — used by app for Secret Manager API calls)
   # TODO: set via Makefile _update-configmap from terraform output project_id
-  PROJECT_ID: "7f7e1a40-fa1f-400d-831d-5d914f377853"
+  PROJECT_ID: "<YOUR_PROJECT_ID>"
 
   # Application Configuration
   APP_NAME: "onboarding-image-converter"
