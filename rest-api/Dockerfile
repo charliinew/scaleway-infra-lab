@@ -4,7 +4,7 @@
 # of a customer. However, Scaleway internal images _must_ be built using the
 # Scaleway internal registry. See the handbook for more information:
 # https://handbook.internal.scaleway.com/build/guidelines/containers
-FROM python:3.14.0-slim
+FROM python:3.14-slim
 
 RUN apt-get update  --quiet --yes && \
   apt-get upgrade --quiet --yes && \
