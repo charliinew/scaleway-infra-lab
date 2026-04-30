@@ -116,14 +116,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-import os as _os
-_web_dir = _os.path.join(_os.path.dirname(__file__), "web")
-if _os.path.isdir(_web_dir):
+_web_dir = os.path.join(os.path.dirname(__file__), "web")
+if os.path.isdir(_web_dir):
     app.mount("/static", StaticFiles(directory=_web_dir), name="static")
 
     @app.get("/")
     async def serve_index():
-        return FileResponse(_os.path.join(_web_dir, "index.html"))
+        return FileResponse(os.path.join(_web_dir, "index.html"))
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
